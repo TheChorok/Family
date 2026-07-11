@@ -344,6 +344,7 @@
     <button class="btn orange" id="menuPlay" style="width:100%;padding:18px 0;font-size:18px;">▶️ 게임 시작 (유저 선택·이어하기)</button>
     <button class="btn green" id="menuTut" style="width:100%;padding:18px 0;font-size:18px;">🎓 체스 배우기 (튜토리얼)</button>
     <button class="btn" id="menuPvp" style="width:100%;padding:18px 0;font-size:18px;background:#7A4FBF;box-shadow:0 3px 0 #5A3A8E;">⚔️ 대전 모드 (가족 대결)</button>
+    <button class="btn" id="menuCloud" style="width:100%;padding:14px 0;font-size:15px;">☁️ 가족 서버 연결</button>
     <button class="btn" id="menuAdd" style="width:100%;">➕ 새 가족 등록</button>
     <button class="btn" id="menuRank" style="width:100%;">🏆 가족 랭킹</button>
   </div>
@@ -371,6 +372,21 @@
     <p style="margin-bottom:0;">레벨 순 · 같으면 <b>레벨업 과정에서 잡은 말</b> 순!<br><span style="font-size:12px;opacity:.6;">(같은 레벨 반복 승리·패배한 판의 잡은 말은 랭킹에 안 들어가요)</span></p>
     <div class="ranklist" id="rankList"></div>
     <button class="btn orange" id="rankClose" style="width:100%">닫기</button>
+  </div>
+</div>
+
+<!-- 가족 서버 연결 모달 -->
+<div class="overlay" id="cloudOverlay">
+  <div class="modal">
+    <div class="big">☁️</div>
+    <h2>가족 서버 연결</h2>
+    <p style="font-size:13px;">모든 기기에서 <b>같은 가족 코드</b>를 입력하면 프로필·전적·랭킹이 하나로 합쳐져요. 체스와 춍춍폴리가 코드를 공유해요.</p>
+    <p id="cloudStatus" style="font-weight:800;font-size:14px;"></p>
+    <input id="cloudCode" type="password" maxlength="30" placeholder="우리끼리 정한 암호"
+      style="width:100%;border:3px solid #D6E0EA;border-radius:12px;padding:12px;font-family:inherit;font-size:16px;box-sizing:border-box;margin-bottom:10px;">
+    <button class="btn green" id="cloudConnect" style="width:100%;margin-bottom:8px;">🔗 연결하기</button>
+    <button class="btn red" id="cloudOff" style="width:100%;margin-bottom:8px;">🔌 연결 해제</button>
+    <button class="btn" id="cloudClose" style="width:100%">닫기</button>
   </div>
 </div>
 
@@ -768,6 +784,47 @@ function loadProfiles(){
 }
 function saveProfiles(){
   try{ localStorage.setItem("chessKidProfiles", JSON.stringify(profiles)); }catch(e){}
+  cloudSave();
+}
+/* ===== ☁️ 가족 서버 (Firebase REST) — 춍춍폴리와 가족 코드 공유 ===== */
+const FB_URL="https://thechorokfamilygame-default-rtdb.asia-southeast1.firebasedatabase.app";
+function cHash(s){ let x=5381; for(const c of s) x=(x*33+c.charCodeAt(0))>>>0; return x.toString(36); }
+function famCode(){ try{ return localStorage.getItem("familyCode")||""; }catch(e){ return ""; } }
+function famUrl(){ return FB_URL+"/families/"+cHash("fam:"+famCode())+"/chess.json"; }
+function stripCloud(list){ return list.map(p=>{ const c=Object.assign({},p); delete c.saved; return c; }); }
+function mergeCloud(local,remote){
+  const NUM=["level","wins","losses","captures","rankCaps","pvpW","pvpL"], map={};
+  [...(remote||[]),...(local||[])].forEach(p=>{
+    if(!p||!p.name)return;
+    if(!map[p.name]) map[p.name]=Object.assign({},p);
+    else{
+      const m=map[p.name];
+      NUM.forEach(f=>{ m[f]=Math.max(m[f]||0,p[f]||0); });
+      Object.keys(p).forEach(f=>{ if(m[f]==null) m[f]=p[f]; });
+    }
+  });
+  return Object.values(map);
+}
+let _cloudT=null;
+function cloudSave(){
+  if(!famCode())return;
+  if(_cloudT)clearTimeout(_cloudT);
+  _cloudT=setTimeout(()=>{
+    try{ fetch(famUrl(),{method:"PUT",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(stripCloud(profiles))}).catch(()=>{}); }catch(e){}
+  },800);
+}
+async function cloudSync(){
+  if(!famCode())return false;
+  let remote=null;
+  try{ const r=await fetch(famUrl()); if(r.ok) remote=await r.json(); }catch(e){ return false; }
+  const savedMap={};
+  profiles.forEach(p=>{ if(p.saved) savedMap[p.name]=p.saved; });
+  profiles=mergeCloud(profiles,remote);
+  profiles.forEach(p=>{ if(savedMap[p.name]) p.saved=savedMap[p.name]; });
+  try{ localStorage.setItem("chessKidProfiles", JSON.stringify(profiles)); }catch(e){}
+  cloudSave();
+  return true;
 }
 function saveLevel(){ if(current){ current.level=level; saveProfiles(); } }
 
@@ -1352,6 +1409,29 @@ function renderPvpList(){
   });
 }
 document.getElementById("menuPvp").addEventListener("click",openPvpChooser);
+const cloudOverlay=document.getElementById("cloudOverlay");
+function openCloud(){
+  document.getElementById("cloudStatus").textContent = famCode() ? "현재: ☁️ 연결됨" : "현재: 미연결 (이 기기에만 저장)";
+  document.getElementById("cloudOff").style.display = famCode() ? "block" : "none";
+  cloudOverlay.classList.add("show");
+}
+document.getElementById("menuCloud").addEventListener("click",openCloud);
+document.getElementById("cloudClose").addEventListener("click",()=>cloudOverlay.classList.remove("show"));
+document.getElementById("cloudOff").addEventListener("click",()=>{
+  try{ localStorage.removeItem("familyCode"); }catch(e){}
+  openCloud();
+});
+document.getElementById("cloudConnect").addEventListener("click",async ()=>{
+  const code=document.getElementById("cloudCode").value.trim();
+  const stEl=document.getElementById("cloudStatus");
+  if(code.length<2){ stEl.textContent="⚠️ 코드는 2자 이상으로 정해요!"; return; }
+  try{ localStorage.setItem("familyCode",code); }catch(e){}
+  stEl.textContent="⏳ 동기화 중...";
+  const ok=await cloudSync();
+  stEl.textContent = ok ? "✅ 연결 완료! 프로필 "+profiles.length+"개 동기화됨" : "⚠️ 서버 연결 실패 — 인터넷 확인 (다음에 자동 재시도)";
+  document.getElementById("cloudOff").style.display = famCode() ? "block" : "none";
+});
+cloudSync(); // 시작 시 자동 동기화
 document.getElementById("pvpCancel").addEventListener("click",()=>pvpOverlay.classList.remove("show"));
 function startPvp(a,b){
   const flip=Math.random()<0.5;           // 🎲 선공(흰색) 랜덤 배정
