@@ -1,0 +1,1452 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>체스 모험 — 레벨 20 대장정</title>
+<style>
+  /* ===== 디자인 토큰 ===== */
+  :root{
+    --bg:#E3EEF7;          /* 부드러운 하늘색 배경 */
+    --card:#FFFFFF;
+    --ink:#27364B;         /* 진한 남색 글자 */
+    --accent:#F5883C;      /* 에너지 오렌지 */
+    --gold:#F2B33D;
+    --danger:#E15B5B;
+    --success:#3FA46A;
+    --sq-light:#F0D9B5;    /* 원목 체스판 밝은 칸 */
+    --sq-dark:#B58863;     /* 원목 체스판 어두운 칸 */
+    --sel:#F2B33D;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;
+    display:flex; flex-direction:column; align-items:center;
+    min-height:100vh; padding:10px 10px 24px;
+    user-select:none; -webkit-user-select:none;
+  }
+  .wrap{width:100%; max-width:480px; display:flex; flex-direction:column; gap:10px; order:1;}
+
+  /* ===== 사이드 패널 (규칙 / 말 이동 방법) ===== */
+  .layout{width:100%; display:flex; flex-direction:column; align-items:center; gap:14px;}
+  .side{
+    background:var(--card); border-radius:18px; padding:14px 16px;
+    width:100%; max-width:480px; box-shadow:0 3px 0 rgba(39,54,75,.1);
+    font-size:13px; line-height:1.6;
+  }
+  .side-title{font-weight:800; font-size:15px; margin-bottom:8px;}
+  .side ul{margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:7px;}
+  #movePanel{order:2;}
+  #rulesPanel{order:3;}
+  .mi-head{display:flex; align-items:center; gap:10px; margin-bottom:6px;}
+  .mi-glyph{font-size:36px; line-height:1;}
+  .mi-name{font-size:17px; font-weight:800;}
+  .mi-hint{opacity:.6;}
+  #rulesPanel{display:none !important;} /* 룰 패널 제거 → 보드 확대 */
+  @media (min-width:1000px){
+    .layout{
+      display:grid; grid-template-columns:minmax(400px, min(820px, calc(100vh - 210px))) 280px;
+      align-items:start; justify-content:center; gap:22px;
+    }
+    .wrap,#movePanel{order:0;}
+    .wrap{grid-column:1; max-width:none;}
+    #movePanel{grid-column:2; position:sticky; top:16px;}
+    .sq{font-size:clamp(26px, 6.8vh, 68px);}
+  }
+  /* 말 슬라이드 애니메이션 */
+  .pc{will-change:transform;}
+  /* ===== ⚔️ 대전 모드: 가로 레이아웃 ===== */
+  .pvp-badge{display:none;}
+  body.pvp #movePanel, body.pvp .foe-card, body.pvp #btnHint{display:none !important;}
+  body.pvp .layout{
+    display:flex; flex-direction:row; align-items:center; justify-content:center;
+    gap:14px; min-height:100vh; padding:8px;
+  }
+  body.pvp .wrap{max-width:none; width:min(92vw - 220px, calc(100vh - 150px), 820px); order:0;}
+  body.pvp .pvp-badge{
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    background:var(--card); border-radius:18px; padding:16px 12px; width:104px;
+    box-shadow:0 3px 0 rgba(39,54,75,.12); border:3px solid transparent;
+    text-align:center; flex-shrink:0;
+  }
+  body.pvp .pvp-badge.on{border-color:var(--gold); background:#FFF9EC; animation:pvpPulse 1.2s infinite;}
+  @keyframes pvpPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.05);}}
+  .pb-av{font-size:40px; line-height:1;}
+  .pb-nm{font-weight:800; font-size:15px; word-break:keep-all;}
+  .pb-cl{font-size:11px; font-weight:800; opacity:.7;}
+  .pb-rec{font-size:11px; opacity:.55;}
+  #rotateHint{display:none; background:#FFF3E8; border-radius:12px; padding:8px 12px;
+    font-size:13px; font-weight:800; text-align:center;}
+  @media (orientation:portrait){
+    body.pvp #rotateHint{display:block;}
+    body.pvp .layout{flex-direction:column;}
+    body.pvp .wrap{width:min(96vw, 76vh);}
+    body.pvp .pvp-badge{flex-direction:row; width:auto; padding:8px 14px; gap:10px;}
+    body.pvp .pb-av{font-size:26px;}
+  }
+
+  /* ===== 상대 카드 (시그니처 요소) ===== */
+  .foe-card{
+    background:var(--card); border-radius:20px; padding:12px 16px;
+    display:flex; align-items:center; gap:14px;
+    box-shadow:0 3px 0 rgba(39,54,75,.12);
+  }
+  .foe-emoji{
+    font-size:44px; line-height:1;
+    background:var(--bg); border-radius:16px; padding:8px;
+  }
+  .foe-info{flex:1;}
+  .foe-name{font-size:19px; font-weight:800;}
+  .foe-sub{font-size:12px; opacity:.65; margin-top:2px;}
+  .lv-badge{
+    background:var(--accent); color:#fff; font-weight:800; font-size:15px;
+    border-radius:999px; padding:6px 14px; white-space:nowrap;
+  }
+  .lv-track{
+    height:8px; background:#E7EDF4; border-radius:999px; margin-top:8px; overflow:hidden;
+  }
+  .lv-fill{height:100%; background:linear-gradient(90deg,var(--gold),var(--accent)); border-radius:999px; transition:width .5s;}
+
+  /* ===== 상태 메시지 ===== */
+  .status{
+    height:58px; border-radius:14px; padding:8px 14px;
+    background:var(--card); font-weight:700; font-size:14px; line-height:1.4;
+    display:flex; align-items:center; gap:8px; overflow:hidden;
+    box-shadow:0 2px 0 rgba(39,54,75,.08);
+    transition:background .2s,color .2s;
+  }
+  .status.warn{background:#FDECEC; color:var(--danger);}
+  .status.good{background:#E9F6EF; color:var(--success);}
+
+  /* ===== 잡은 말 트레이 ===== */
+  .tray{height:26px; line-height:26px; font-size:18px; letter-spacing:2px; padding:0 6px; opacity:.85; overflow:hidden; white-space:nowrap;}
+
+  /* ===== 체스판 ===== */
+  .board-shell{
+    background:#8A6543; padding:8px; border-radius:18px;
+    box-shadow:0 5px 0 rgba(39,54,75,.18);
+  }
+  .board{
+    display:grid;
+    grid-template-columns:repeat(8,1fr);
+    grid-template-rows:repeat(8,1fr);
+    width:100%; aspect-ratio:1/1; border-radius:10px; overflow:hidden;
+  }
+  .sq{
+    position:relative; display:flex; align-items:center; justify-content:center;
+    font-size:clamp(26px, 9vw, 44px); cursor:pointer;
+    min-width:0; min-height:0; overflow:hidden;
+  }
+  .sq.light{background:var(--sq-light);}
+  .sq.dark{background:var(--sq-dark);}
+  .sq.lastmove::before{
+    content:""; position:absolute; inset:0; background:rgba(242,179,61,.4);
+  }
+  .sq.selected::before{
+    content:""; position:absolute; inset:0;
+    box-shadow:inset 0 0 0 4px var(--sel); border-radius:2px;
+  }
+  .sq.check::before{
+    content:""; position:absolute; inset:0; background:rgba(225,91,91,.55);
+  }
+  .sq .dot{
+    position:absolute; width:26%; height:26%; border-radius:50%;
+    background:rgba(39,54,75,.35);
+  }
+  .sq .ring{
+    position:absolute; inset:6%; border-radius:50%;
+    border:4px solid rgba(39,54,75,.4);
+  }
+  .sq .hintmark{
+    position:absolute; inset:0; box-shadow:inset 0 0 0 4px var(--success); border-radius:2px;
+  }
+  .pc{position:relative; z-index:2; line-height:1;}
+  .pc.w{color:#FFFFFF; text-shadow:0 0 3px #444, 0 2px 3px rgba(0,0,0,.35);}
+  .pc.b{color:#2B2B2B; text-shadow:0 2px 3px rgba(0,0,0,.25);}
+
+  @keyframes shake{
+    0%,100%{transform:translateX(0);}
+    20%{transform:translateX(-6px);} 40%{transform:translateX(6px);}
+    60%{transform:translateX(-4px);} 80%{transform:translateX(4px);}
+  }
+  .sq.shake{animation:shake .35s;}
+  @keyframes pop{0%{transform:scale(.4);}70%{transform:scale(1.15);}100%{transform:scale(1);}}
+  .pc.pop{animation:pop .25s;}
+
+  /* ===== 버튼 ===== */
+  .btnrow{display:flex; gap:10px;}
+  .btn{
+    flex:1; border:none; border-radius:16px; padding:14px 0;
+    font-size:16px; font-weight:800; font-family:inherit; cursor:pointer;
+    color:#fff; background:var(--ink);
+    box-shadow:0 4px 0 rgba(39,54,75,.35);
+  }
+  .btn:active{transform:translateY(2px); box-shadow:0 2px 0 rgba(39,54,75,.35);}
+  .btn.orange{background:var(--accent); box-shadow:0 4px 0 #C9662A;}
+  .btn.green{background:var(--success); box-shadow:0 4px 0 #2C7A4E;}
+  .btn:focus-visible{outline:3px solid var(--gold); outline-offset:2px;}
+
+  /* ===== 모달 ===== */
+  .overlay{
+    position:fixed; inset:0; background:rgba(39,54,75,.55);
+    display:none; align-items:center; justify-content:center; z-index:90; padding:20px;
+  }
+  .overlay.show{display:flex;}
+  .modal{
+    background:var(--card); border-radius:24px; padding:28px 24px;
+    width:100%; max-width:340px; text-align:center;
+    animation:pop .3s;
+  }
+  .modal .big{font-size:56px;}
+  .modal h2{margin:10px 0 6px; font-size:24px;}
+  .modal p{margin:0 0 18px; font-size:15px; opacity:.75; line-height:1.5;}
+
+  /* 축하 이모지 낙하 */
+  .confetti{position:fixed; top:-40px; font-size:26px; z-index:60; pointer-events:none;
+    animation:fall linear forwards;}
+  @keyframes fall{to{transform:translateY(110vh) rotate(360deg);}}
+
+  /* ===== 상단 바 ===== */
+  .topbar{display:flex; gap:10px;}
+  .chip{
+    flex:1; display:flex; align-items:center; gap:8px; justify-content:center;
+    background:var(--card); border:none; border-radius:14px; padding:10px 12px;
+    font-family:inherit; font-size:15px; font-weight:800; color:var(--ink);
+    box-shadow:0 2px 0 rgba(39,54,75,.1); cursor:pointer;
+  }
+  .chip:active{transform:translateY(1px);}
+
+  /* ===== 프로필 화면 ===== */
+  .screen{
+    position:fixed; inset:0; background:var(--bg); z-index:80;
+    display:none; flex-direction:column; align-items:center;
+    padding:28px 16px; overflow-y:auto;
+  }
+  .screen.show{display:flex;}
+  .screen h1{font-size:26px; margin:6px 0 4px;}
+  .screen .sub{font-size:14px; opacity:.65; margin-bottom:18px;}
+  .plist{width:100%; max-width:420px; display:flex; flex-direction:column; gap:10px;}
+  .pcard{
+    display:flex; align-items:center; gap:12px; width:100%;
+    background:var(--card); border:none; border-radius:18px; padding:14px 16px;
+    font-family:inherit; color:var(--ink); cursor:pointer; text-align:left;
+    box-shadow:0 3px 0 rgba(39,54,75,.12);
+  }
+  .pcard:active{transform:translateY(2px);}
+  .pcard .av{font-size:34px;}
+  .pcard .nm{font-size:17px; font-weight:800;}
+  .pcard .dt{font-size:12px; opacity:.65; margin-top:2px;}
+  .pcard .del{
+    margin-left:auto; border:none; background:#F1F4F8; color:#98A6B8;
+    border-radius:10px; width:34px; height:34px; font-size:15px; cursor:pointer;
+    flex-shrink:0;
+  }
+  .avgrid{display:grid; grid-template-columns:repeat(6,1fr); gap:8px; width:100%; margin:10px 0;}
+  .avbtn{
+    font-size:26px; background:var(--card); border:3px solid transparent;
+    border-radius:14px; padding:8px 0; cursor:pointer;
+  }
+  .avbtn.sel{border-color:var(--accent); background:#FFF3E8;}
+  .nameinput{
+    width:100%; border:3px solid #D6E0EA; border-radius:14px;
+    padding:12px 14px; font-size:17px; font-family:inherit; font-weight:700;
+    color:var(--ink); background:var(--card); outline:none;
+  }
+  .nameinput:focus{border-color:var(--accent);}
+
+  /* ===== 랭킹 ===== */
+  .ranklist{display:flex; flex-direction:column; gap:8px; margin:14px 0; max-height:50vh; overflow-y:auto;}
+  .rankrow{
+    display:flex; align-items:center; gap:10px; background:#F4F8FB;
+    border-radius:14px; padding:10px 12px; text-align:left;
+  }
+  .rankrow.me{background:#FFF3E8; box-shadow:inset 0 0 0 2px var(--gold);}
+  .rankrow .medal{font-size:20px; width:28px; text-align:center; font-weight:800; flex-shrink:0;}
+  .rankrow .rnm{font-size:15px; font-weight:800;}
+  .rankrow .rdt{font-size:12px; opacity:.65; margin-top:1px;}
+  .rankrow .rlv{margin-left:auto; font-weight:800; color:var(--accent); font-size:14px; white-space:nowrap;}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none !important; transition:none !important;}
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<aside class="side" id="rulesPanel">
+  <div class="side-title">📜 꼭 알아둘 규칙</div>
+  <ul>
+    <li>✋ <b>터치무브</b>: 한 번 고른 말은 절대 바꿀 수 없어요! (진짜 체스 대회 규칙)</li>
+    <li>🚫 갈 수 없는 칸을 누르면 <b>삑! 소리</b>가 나고 움직일 수 없어요.</li>
+    <li>👑 폰이 상대 <b>맨 끝줄</b>에 도착하면 바로 <b>퀸으로 변신</b>해요!</li>
+    <li>⚔️ <b>체크</b>: 내 킹이 공격받으면 반드시 킹부터 구해야 해요.</li>
+    <li>🏰 <b>캐슬링</b>: 킹과 룩이 한 번도 안 움직였다면, 킹이 2칸 옆으로 가는 특별 이동을 할 수 있어요.</li>
+    <li>👻 <b>앙파상</b>: 상대 폰이 2칸 전진한 <b>바로 다음 수</b>에만, 내 폰이 옆으로 지나가며 잡을 수 있어요.</li>
+    <li>🤝 움직일 수 있는 말이 없는데 체크도 아니면 <b>무승부</b>예요.</li>
+  </ul>
+</aside>
+
+<div class="pvp-badge" id="pvpLeft"></div>
+
+<div class="wrap">
+
+  <div id="rotateHint">📱 대전 모드는 화면을 가로로 돌리면 더 시원해요!</div>
+
+  <div class="topbar">
+    <button class="chip" id="chipPlayer">👤 플레이어</button>
+    <button class="chip" id="chipRank">🏆 랭킹</button>
+  </div>
+
+  <div class="foe-card">
+    <div class="foe-emoji" id="foeEmoji">🐣</div>
+    <div class="foe-info">
+      <div class="foe-name" id="foeName">병아리 초코</div>
+      <div class="foe-sub" id="foeSub">첫 번째 상대야! 이기면 다음 친구가 기다려.</div>
+      <div class="lv-track"><div class="lv-fill" id="lvFill" style="width:5%"></div></div>
+    </div>
+    <div class="lv-badge" id="lvBadge">Lv.1</div>
+  </div>
+
+  <div class="tray" id="trayTop"></div>
+
+  <div class="board-shell"><div class="board" id="board"></div></div>
+
+  <div class="tray" id="trayBottom"></div>
+
+  <div class="status" id="status">♟️ 흰색 말이 내 거예요. 말을 골라 보세요!</div>
+
+  <div class="btnrow">
+    <button class="btn green" id="btnHint">💡 힌트</button>
+    <button class="btn orange" id="btnNew">🔄 다시 시작</button>
+    <button class="btn" id="btnMenu">🏠 메뉴</button>
+  </div>
+</div>
+
+<aside class="side" id="movePanel">
+  <div class="side-title">🧭 이 말은 어떻게 움직일까?</div>
+  <div id="moveInfo"><div class="mi-hint">말을 고르면 여기에 움직이는 방법이 나와요!</div></div>
+</aside>
+
+<div class="pvp-badge" id="pvpRight"></div>
+
+</div><!-- /layout -->
+
+<!-- 메인 메뉴 화면 -->
+<div class="screen" id="menuScreen" style="z-index:82;">
+  <div style="font-size:64px;margin-top:24px;">♟️</div>
+  <h1>체스 모험</h1>
+  <div class="sub">레벨 20 대장정에 도전해요!</div>
+  <div class="plist" style="margin-top:8px;">
+    <button class="btn orange" id="menuPlay" style="width:100%;padding:18px 0;font-size:18px;">▶️ 게임 시작 (유저 선택·이어하기)</button>
+    <button class="btn green" id="menuTut" style="width:100%;padding:18px 0;font-size:18px;">🎓 체스 배우기 (튜토리얼)</button>
+    <button class="btn" id="menuPvp" style="width:100%;padding:18px 0;font-size:18px;background:#7A4FBF;box-shadow:0 3px 0 #5A3A8E;">⚔️ 대전 모드 (가족 대결)</button>
+    <button class="btn" id="menuAdd" style="width:100%;">➕ 새 가족 등록</button>
+    <button class="btn" id="menuRank" style="width:100%;">🏆 가족 랭킹</button>
+  </div>
+</div>
+
+<!-- 프로필 선택/등록 화면 -->
+<div class="screen" id="pScreen">
+  <h1>♟️ 체스 모험</h1>
+  <div class="sub">누가 플레이할까요?</div>
+  <div class="plist" id="pList"></div>
+  <div id="pNew" style="width:100%;max-width:420px;display:none;margin-top:14px;">
+    <input class="nameinput" id="pName" maxlength="8" placeholder="이름을 입력해요 (8글자까지)">
+    <div class="avgrid" id="avGrid"></div>
+    <button class="btn green" id="pCreate" style="width:100%">✅ 등록하고 시작!</button>
+  </div>
+  <button class="btn orange" id="pAddBtn" style="width:100%;max-width:420px;margin-top:14px;">➕ 새 가족 등록</button>
+  <button class="btn" id="pBack" style="width:100%;max-width:420px;margin-top:10px;">← 메뉴로</button>
+</div>
+
+<!-- 랭킹 모달 -->
+<div class="overlay" id="rankOverlay">
+  <div class="modal">
+    <div class="big">🏆</div>
+    <h2>가족 랭킹</h2>
+    <p style="margin-bottom:0;">레벨 순 · 같으면 <b>레벨업 과정에서 잡은 말</b> 순!<br><span style="font-size:12px;opacity:.6;">(같은 레벨 반복 승리·패배한 판의 잡은 말은 랭킹에 안 들어가요)</span></p>
+    <div class="ranklist" id="rankList"></div>
+    <button class="btn orange" id="rankClose" style="width:100%">닫기</button>
+  </div>
+</div>
+
+<!-- 대전 상대 선택 모달 -->
+<div class="overlay" id="pvpOverlay">
+  <div class="modal">
+    <div class="big">⚔️</div>
+    <h2 id="pvpTitle">첫 번째 플레이어</h2>
+    <p style="margin-bottom:0;font-size:13px;">등록된 가족 중에서 골라요. 선공(흰색)은 랜덤으로 정해져요! 🎲</p>
+    <div class="ranklist" id="pvpList"></div>
+    <button class="btn" id="pvpCancel" style="width:100%">취소</button>
+  </div>
+</div>
+
+<!-- 결과 모달 -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="big" id="mEmoji">🎉</div>
+    <h2 id="mTitle">승리!</h2>
+    <p id="mText"></p>
+    <button class="btn orange" id="mBtn" style="width:100%">다음 레벨로!</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* =========================================================
+   체스 모험 — 만 8세용 20레벨 체스 게임 (자체 엔진)
+   규칙: 터치무브(고른 말 변경 불가), 잘못된 이동 시 경고음+차단
+   ========================================================= */
+
+/* ---------- 20명의 상대 캐릭터 ---------- */
+const FOES = [
+  ["🐣","병아리 초코","이제 막 체스를 배웠대!"],
+  ["🐰","토끼 통통","깡충깡충, 실수를 자주 해."],
+  ["🐹","햄스터 도토리","말을 아무 데나 움직여."],
+  ["🐶","강아지 몽실","가끔 좋은 수를 둬!"],
+  ["🐱","고양이 나비","말 잡는 걸 좋아해."],
+  ["🦊","여우 새침이","조금씩 꾀를 부리기 시작해."],
+  ["🐼","판다 만두","느긋하지만 만만치 않아."],
+  ["🐨","코알라 꾸벅이","졸다가도 좋은 수를 둬."],
+  ["🦉","부엉이 밤톨","두 수 앞을 내다봐."],
+  ["🐺","늑대 회색이","공격을 좋아하는 상대야."],
+  ["🦅","독수리 창공","판 전체를 넓게 봐."],
+  ["🦁","사자 용맹이","왕을 잘 지켜야 해!"],
+  ["🐯","호랑이 번개","빠르고 날카로운 공격!"],
+  ["🐻","곰 우람이","튼튼한 수비가 특기야."],
+  ["🦈","상어 이빨이","실수하면 바로 문다!"],
+  ["🐙","문어 천재","여덟 개의 다리로 여덟 수를 생각해."],
+  ["🦖","공룡 렉스","엄청나게 강해졌어!"],
+  ["🧙","마법사 모모","세 수, 네 수 앞을 읽어."],
+  ["🤖","로봇 알파","계산이 아주 정확해."],
+  ["🐉","전설의 용","마지막 상대! 체스 챔피언에 도전!"]
+];
+
+/* ---------- 말 표시 ---------- */
+const GLYPH = {K:"♚",Q:"♛",R:"♜",B:"♝",N:"♞",P:"♟",
+               k:"♚",q:"♛",r:"♜",b:"♝",n:"♞",p:"♟"};
+const VAL = {P:100,N:320,B:330,R:500,Q:900,K:20000};
+
+/* ---------- 기물 위치 점수표 (백 기준, index 0 = a8) ---------- */
+const PST = {
+P:[0,0,0,0,0,0,0,0, 50,50,50,50,50,50,50,50, 10,10,20,30,30,20,10,10,
+   5,5,10,25,25,10,5,5, 0,0,0,20,20,0,0,0, 5,-5,-10,0,0,-10,-5,5,
+   5,10,10,-20,-20,10,10,5, 0,0,0,0,0,0,0,0],
+N:[-50,-40,-30,-30,-30,-30,-40,-50, -40,-20,0,0,0,0,-20,-40,
+   -30,0,10,15,15,10,0,-30, -30,5,15,20,20,15,5,-30,
+   -30,0,15,20,20,15,0,-30, -30,5,10,15,15,10,5,-30,
+   -40,-20,0,5,5,0,-20,-40, -50,-40,-30,-30,-30,-30,-40,-50],
+B:[-20,-10,-10,-10,-10,-10,-10,-20, -10,0,0,0,0,0,0,-10,
+   -10,0,5,10,10,5,0,-10, -10,5,5,10,10,5,5,-10,
+   -10,0,10,10,10,10,0,-10, -10,10,10,10,10,10,10,-10,
+   -10,5,0,0,0,0,5,-10, -20,-10,-10,-10,-10,-10,-10,-20],
+R:[0,0,0,0,0,0,0,0, 5,10,10,10,10,10,10,5, -5,0,0,0,0,0,0,-5,
+   -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5,
+   -5,0,0,0,0,0,0,-5, 0,0,0,5,5,0,0,0],
+Q:[-20,-10,-10,-5,-5,-10,-10,-20, -10,0,0,0,0,0,0,-10,
+   -10,0,5,5,5,5,0,-10, -5,0,5,5,5,5,0,-5,
+   0,0,5,5,5,5,0,-5, -10,5,5,5,5,5,0,-10,
+   -10,0,5,0,0,0,0,-10, -20,-10,-10,-5,-5,-10,-10,-20],
+K:[-30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30,
+   -30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30,
+   -20,-30,-30,-40,-40,-30,-30,-20, -10,-20,-20,-20,-20,-20,-20,-10,
+   20,20,0,0,0,0,20,20, 20,30,10,0,0,10,30,20]
+};
+
+const KN = [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
+const KD = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+const BD = [[-1,-1],[-1,1],[1,-1],[1,1]];
+const RD = [[-1,0],[1,0],[0,-1],[0,1]];
+
+const isW = p => p >= "A" && p <= "Z";
+
+/* ---------- 게임 상태 ---------- */
+let st;                      // {b, turn, cr, ep, kW, kB}
+function newState(){
+  const b = new Array(64).fill(null);
+  const back = ["r","n","b","q","k","b","n","r"];
+  for(let c=0;c<8;c++){
+    b[c]=back[c]; b[8+c]="p";
+    b[48+c]="P"; b[56+c]=back[c].toUpperCase();
+  }
+  return {b, turn:"w", cr:{K:true,Q:true,k:true,q:true}, ep:-1, kW:60, kB:4};
+}
+
+/* ---------- 공격 판정 ---------- */
+function attacked(b, sq, byWhite){
+  const r = sq>>3, c = sq&7;
+  // 폰
+  if(byWhite){
+    if(r+1<8 && c-1>=0 && b[(r+1)*8+c-1]==="P") return true;
+    if(r+1<8 && c+1<8  && b[(r+1)*8+c+1]==="P") return true;
+  }else{
+    if(r-1>=0 && c-1>=0 && b[(r-1)*8+c-1]==="p") return true;
+    if(r-1>=0 && c+1<8  && b[(r-1)*8+c+1]==="p") return true;
+  }
+  // 나이트
+  for(const [dr,dc] of KN){
+    const nr=r+dr, nc=c+dc;
+    if(nr<0||nr>7||nc<0||nc>7) continue;
+    const p=b[nr*8+nc];
+    if(p && p===(byWhite?"N":"n")) return true;
+  }
+  // 킹
+  for(const [dr,dc] of KD){
+    const nr=r+dr, nc=c+dc;
+    if(nr<0||nr>7||nc<0||nc>7) continue;
+    const p=b[nr*8+nc];
+    if(p && p===(byWhite?"K":"k")) return true;
+  }
+  // 비숍/퀸 대각선
+  for(const [dr,dc] of BD){
+    let nr=r+dr, nc=c+dc;
+    while(nr>=0&&nr<8&&nc>=0&&nc<8){
+      const p=b[nr*8+nc];
+      if(p){
+        if(byWhite ? (p==="B"||p==="Q") : (p==="b"||p==="q")) return true;
+        break;
+      }
+      nr+=dr; nc+=dc;
+    }
+  }
+  // 룩/퀸 직선
+  for(const [dr,dc] of RD){
+    let nr=r+dr, nc=c+dc;
+    while(nr>=0&&nr<8&&nc>=0&&nc<8){
+      const p=b[nr*8+nc];
+      if(p){
+        if(byWhite ? (p==="R"||p==="Q") : (p==="r"||p==="q")) return true;
+        break;
+      }
+      nr+=dr; nc+=dc;
+    }
+  }
+  return false;
+}
+const inCheck = (s, whiteSide) => attacked(s.b, whiteSide?s.kW:s.kB, !whiteSide);
+
+/* ---------- 수 생성 (의사 합법수) ---------- */
+function genPseudo(s){
+  const b=s.b, white=(s.turn==="w"), out=[];
+  for(let i=0;i<64;i++){
+    const p=b[i];
+    if(!p || isW(p)!==white) continue;
+    const r=i>>3, c=i&7, u=p.toUpperCase();
+    if(u==="P"){
+      const dir = white?-1:1, startR = white?6:1, promoR = white?0:7;
+      const one=(r+dir)*8+c;
+      if(r+dir>=0 && r+dir<8 && !b[one]){
+        out.push({f:i,t:one,p, promo:(r+dir===promoR)?(white?"Q":"q"):null});
+        const two=(r+2*dir)*8+c;
+        if(r===startR && !b[two]) out.push({f:i,t:two,p,flag:"d"});
+      }
+      for(const dc of [-1,1]){
+        const nc=c+dc, nr=r+dir;
+        if(nc<0||nc>7||nr<0||nr>7) continue;
+        const t=nr*8+nc, q=b[t];
+        if(q && isW(q)!==white)
+          out.push({f:i,t,p,cap:q, promo:(nr===promoR)?(white?"Q":"q"):null});
+        else if(!q && t===s.ep)
+          out.push({f:i,t,p,flag:"e"});
+      }
+    }else if(u==="N"||u==="K"){
+      const dirs = u==="N"?KN:KD;
+      for(const [dr,dc] of dirs){
+        const nr=r+dr, nc=c+dc;
+        if(nr<0||nr>7||nc<0||nc>7) continue;
+        const t=nr*8+nc, q=b[t];
+        if(!q || isW(q)!==white) out.push({f:i,t,p,cap:q||null});
+      }
+      if(u==="K"){ // 캐슬링
+        if(white && i===60){
+          if(s.cr.K && !b[61]&&!b[62] && b[63]==="R" &&
+             !attacked(b,60,false)&&!attacked(b,61,false)&&!attacked(b,62,false))
+            out.push({f:60,t:62,p,flag:"c"});
+          if(s.cr.Q && !b[57]&&!b[58]&&!b[59] && b[56]==="R" &&
+             !attacked(b,60,false)&&!attacked(b,59,false)&&!attacked(b,58,false))
+            out.push({f:60,t:58,p,flag:"c"});
+        }else if(!white && i===4){
+          if(s.cr.k && !b[5]&&!b[6] && b[7]==="r" &&
+             !attacked(b,4,true)&&!attacked(b,5,true)&&!attacked(b,6,true))
+            out.push({f:4,t:6,p,flag:"c"});
+          if(s.cr.q && !b[1]&&!b[2]&&!b[3] && b[0]==="r" &&
+             !attacked(b,4,true)&&!attacked(b,3,true)&&!attacked(b,2,true))
+            out.push({f:4,t:2,p,flag:"c"});
+        }
+      }
+    }else{
+      const dirs = u==="B"?BD : u==="R"?RD : KD; // Q는 8방향
+      for(const [dr,dc] of dirs){
+        let nr=r+dr, nc=c+dc;
+        while(nr>=0&&nr<8&&nc>=0&&nc<8){
+          const t=nr*8+nc, q=b[t];
+          if(!q){ out.push({f:i,t,p}); }
+          else{ if(isW(q)!==white) out.push({f:i,t,p,cap:q}); break; }
+          nr+=dr; nc+=dc;
+        }
+      }
+    }
+  }
+  return out;
+}
+
+/* ---------- 수 적용 / 되돌리기 ---------- */
+function applyMove(s, m){
+  const b=s.b, white=isW(m.p);
+  const u = {cap:b[m.t], ep:s.ep, cr:{...s.cr}, kW:s.kW, kB:s.kB, capIdx:-1};
+  b[m.t] = m.promo ? m.promo : m.p;
+  b[m.f] = null;
+  if(m.flag==="e"){
+    const ci = m.t + (white?8:-8);
+    u.cap = b[ci]; u.capIdx = ci; b[ci]=null;
+  }
+  if(m.flag==="c"){
+    if(m.t===62){ b[61]="R"; b[63]=null; }
+    else if(m.t===58){ b[59]="R"; b[56]=null; }
+    else if(m.t===6){ b[5]="r"; b[7]=null; }
+    else if(m.t===2){ b[3]="r"; b[0]=null; }
+  }
+  s.ep = (m.flag==="d") ? (m.f+m.t)/2 : -1;
+  if(m.p==="K"){ s.cr.K=false; s.cr.Q=false; s.kW=m.t; }
+  if(m.p==="k"){ s.cr.k=false; s.cr.q=false; s.kB=m.t; }
+  for(const sq of [m.f, m.t]){
+    if(sq===63) s.cr.K=false;
+    if(sq===56) s.cr.Q=false;
+    if(sq===7)  s.cr.k=false;
+    if(sq===0)  s.cr.q=false;
+  }
+  s.turn = white ? "b" : "w";
+  return u;
+}
+function undoMove(s, m, u){
+  const b=s.b, white=isW(m.p);
+  b[m.f]=m.p;
+  b[m.t]=null;
+  if(u.capIdx>=0){ b[u.capIdx]=u.cap; }
+  else if(u.cap){ b[m.t]=u.cap; }
+  if(m.flag==="c"){
+    if(m.t===62){ b[63]="R"; b[61]=null; }
+    else if(m.t===58){ b[56]="R"; b[59]=null; }
+    else if(m.t===6){ b[7]="r"; b[5]=null; }
+    else if(m.t===2){ b[0]="r"; b[3]=null; }
+  }
+  s.ep=u.ep; s.cr=u.cr; s.kW=u.kW; s.kB=u.kB;
+  s.turn = white ? "w" : "b";
+}
+function genLegal(s){
+  const white=(s.turn==="w");
+  return genPseudo(s).filter(m=>{
+    const u=applyMove(s,m);
+    const ok=!inCheck(s,white);
+    undoMove(s,m,u);
+    return ok;
+  });
+}
+
+/* ---------- 평가 & 탐색 (AI 두뇌) ---------- */
+function evaluate(s){
+  let sc=0;
+  for(let i=0;i<64;i++){
+    const p=s.b[i];
+    if(!p) continue;
+    const u=p.toUpperCase(), v=VAL[u]+PST[u][isW(p)?i:(i^56)];
+    sc += isW(p)? v : -v;
+  }
+  return sc; // 백 기준
+}
+const sideEval = s => (s.turn==="w"?1:-1)*evaluate(s);
+
+function orderMoves(moves){
+  moves.sort((a,b)=>{
+    const av = a.cap? VAL[a.cap.toUpperCase()]-VAL[a.p.toUpperCase()]/10 : -1;
+    const bv = b.cap? VAL[b.cap.toUpperCase()]-VAL[b.p.toUpperCase()]/10 : -1;
+    return bv-av;
+  });
+  return moves;
+}
+function qsearch(s, alpha, beta, qd){
+  const stand=sideEval(s);
+  if(stand>=beta) return beta;
+  if(stand>alpha) alpha=stand;
+  if(qd<=0) return alpha;
+  const caps=genLegal(s).filter(m=>m.cap||m.flag==="e");
+  orderMoves(caps);
+  for(const m of caps){
+    const u=applyMove(s,m);
+    const sc=-qsearch(s,-beta,-alpha,qd-1);
+    undoMove(s,m,u);
+    if(sc>=beta) return beta;
+    if(sc>alpha) alpha=sc;
+  }
+  return alpha;
+}
+function negamax(s, depth, alpha, beta, ply){
+  const moves=genLegal(s);
+  if(moves.length===0)
+    return inCheck(s, s.turn==="w") ? -100000+ply : 0;
+  if(depth<=0) return qsearch(s, alpha, beta, 4);
+  orderMoves(moves);
+  for(const m of moves){
+    const u=applyMove(s,m);
+    const sc=-negamax(s,depth-1,-beta,-alpha,ply+1);
+    undoMove(s,m,u);
+    if(sc>=beta) return beta;
+    if(sc>alpha) alpha=sc;
+  }
+  return alpha;
+}
+
+/* 레벨 → AI 강도 매핑 */
+function aiDepth(lv){ return lv<=4?1 : lv<=10?2 : 3; }
+function aiRandomChance(lv){
+  return lv<=2?0.7 : lv<=4?0.45 : lv<=6?0.28 : lv<=8?0.15 : lv<=10?0.07 : 0;
+}
+function chooseAiMove(lv){
+  const moves=genLegal(st);
+  if(moves.length===0) return null;
+  if(Math.random()<aiRandomChance(lv))
+    return moves[Math.floor(Math.random()*moves.length)];
+  const depth=aiDepth(lv);
+  const scored=[];
+  for(const m of moves){
+    const u=applyMove(st,m);
+    const sc=-negamax(st,depth-1,-100000,100000,1);
+    undoMove(st,m,u);
+    scored.push({m,sc});
+  }
+  scored.sort((a,b)=>b.sc-a.sc);
+  const margin=(21-lv)*12; // 레벨이 낮을수록 '괜찮은 수' 범위가 넓음
+  const pool=scored.filter(x=>x.sc>=scored[0].sc-margin);
+  return pool[Math.floor(Math.random()*pool.length)].m;
+}
+
+/* ---------- 소리 (Web Audio) ---------- */
+let AC=null;
+function audio(){ try{ if(!AC) AC=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} return AC; }
+function tone(freq, dur, type, vol, when){
+  try{
+    const ctx=audio(), o=ctx.createOscillator(), g=ctx.createGain();
+    o.type=type; o.frequency.value=freq;
+    g.gain.setValueAtTime(vol, ctx.currentTime+when);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+when+dur);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(ctx.currentTime+when); o.stop(ctx.currentTime+when+dur+0.02);
+  }catch(e){}
+}
+const sndMove    = ()=>tone(340,0.07,"square",0.15,0);
+const sndCapture = ()=>{tone(300,0.06,"square",0.18,0); tone(430,0.08,"square",0.18,0.06);};
+const sndWarn    = ()=>{tone(160,0.12,"sawtooth",0.22,0); tone(120,0.16,"sawtooth",0.22,0.12);};
+const sndCheck   = ()=>{tone(520,0.09,"triangle",0.2,0); tone(660,0.12,"triangle",0.2,0.1);};
+const sndWin     = ()=>[523,659,784,1047].forEach((f,i)=>tone(f,0.18,"triangle",0.22,i*0.13));
+const sndLose    = ()=>[392,330,262].forEach((f,i)=>tone(f,0.2,"triangle",0.18,i*0.15));
+
+/* ---------- UI ---------- */
+const boardEl=document.getElementById("board");
+const statusEl=document.getElementById("status");
+const trayTop=document.getElementById("trayTop");
+const trayBottom=document.getElementById("trayBottom");
+const overlay=document.getElementById("overlay");
+
+/* ---------- 프로필(사용자) 시스템 ---------- */
+const AVATARS=["🦁","🐯","🦊","🐰","🐻","🐼","🦄","🐸","🐵","🤖","🦖","👑"];
+let profiles=[], current=null;   // current = 지금 플레이 중인 프로필
+let level=1;
+let selected=-1, legalForSel=[], lastMove=null, busy=false, gameOver=false;
+let capturedByPlayer=[], capturedByAi=[], hintMove=null;
+let pvp=null; // ⚔️ 대전 모드: {w:프로필, b:프로필}
+
+function loadProfiles(){
+  try{ profiles=JSON.parse(localStorage.getItem("chessKidProfiles")||"[]"); }
+  catch(e){ profiles=[]; }
+  if(!Array.isArray(profiles)) profiles=[];
+  // 랭킹용 필드 이전: 레벨업 판의 잡은 말만 집계 (기존 누적은 1회 인정)
+  profiles.forEach(p=>{ if(p.rankCaps==null) p.rankCaps=p.captures||0; });
+}
+function saveProfiles(){
+  try{ localStorage.setItem("chessKidProfiles", JSON.stringify(profiles)); }catch(e){}
+}
+function saveLevel(){ if(current){ current.level=level; saveProfiles(); } }
+
+/* 두던 판 저장(이어하기용) — 게임이 끝나면 저장본 삭제 */
+function snapshotGame(){
+  if(!current) return;
+  if(gameOver){ current.saved=null; }
+  else current.saved={
+    b:st.b, turn:st.turn, cr:st.cr, ep:st.ep, kW:st.kW, kB:st.kB,
+    last:lastMove?{f:lastMove.f,t:lastMove.t}:null,
+    cp:capturedByPlayer, ca:capturedByAi, level:level
+  };
+  saveProfiles();
+}
+
+function setFoe(){
+  const [e,n,d]=FOES[level-1];
+  document.getElementById("foeEmoji").textContent=e;
+  document.getElementById("foeName").textContent=n;
+  document.getElementById("foeSub").textContent=d;
+  document.getElementById("lvBadge").textContent="Lv."+level;
+  document.getElementById("lvFill").style.width=(level/20*100)+"%";
+}
+function setStatus(msg, kind){
+  statusEl.textContent=msg;
+  statusEl.className="status"+(kind?" "+kind:"");
+}
+
+function render(){
+  boardEl.innerHTML="";
+  const checkSq = inCheck(st, st.turn==="w") ? (st.turn==="w"?st.kW:st.kB) : -1;
+  for(let i=0;i<64;i++){
+    const sq=document.createElement("div");
+    const r=i>>3, c=i&7;
+    sq.className="sq "+(((r+c)%2===0)?"light":"dark");
+    sq.dataset.idx=i;
+    if(pvp){ sq.style.gridRow=(c+1); sq.style.gridColumn=(8-r); } // ⚔️ 좌우 대결 배치
+    if(lastMove && (i===lastMove.f||i===lastMove.t)) sq.classList.add("lastmove");
+    if(i===selected) sq.classList.add("selected");
+    if(i===checkSq) sq.classList.add("check");
+    if(selected>=0){
+      const mv=legalForSel.find(m=>m.t===i);
+      if(mv){
+        const mark=document.createElement("div");
+        mark.className = (st.b[i]||mv.flag==="e") ? "ring" : "dot";
+        sq.appendChild(mark);
+      }
+    }
+    if(hintMove && (i===hintMove.f||i===hintMove.t)){
+      const h=document.createElement("div"); h.className="hintmark"; sq.appendChild(h);
+    }
+    const p=st.b[i];
+    if(p){
+      const pc=document.createElement("div");
+      pc.className="pc "+(isW(p)?"w":"b");
+      pc.textContent=GLYPH[p];
+      sq.appendChild(pc);
+    }
+    sq.addEventListener("pointerdown", onTap);
+    boardEl.appendChild(sq);
+  }
+  trayTop.textContent = capturedByPlayer.map(p=>GLYPH[p]).join(" ");
+  trayBottom.textContent = capturedByAi.map(p=>GLYPH[p]).join(" ");
+}
+
+/* 말 슬라이드 애니메이션: 렌더 후 목적지 말이 출발지에서 미끄러져 옴 */
+function animSlide(f,t){
+  try{
+    const cell=boardEl.children[t]; if(!cell||!cell.querySelector) return;
+    const el=cell.querySelector(".pc"); if(!el||!el.style) return;
+    let dx,dy;
+    if(pvp){ dx=((t>>3)-(f>>3))*100; dy=((f&7)-(t&7))*100; } // 회전 배치 보정
+    else{ dx=((f&7)-(t&7))*100; dy=((f>>3)-(t>>3))*100; }
+    el.style.transition="none";
+    el.style.transform="translate("+dx+"%, "+dy+"%)";
+    const go=()=>{ el.style.transition="transform .16s ease-out"; el.style.transform="translate(0,0)"; };
+    if(typeof requestAnimationFrame==="function") requestAnimationFrame(()=>requestAnimationFrame(go));
+    else setTimeout(go,16);
+  }catch(e){}
+}
+function shakeSq(i){
+  const el=boardEl.children[i];
+  if(!el) return;
+  el.classList.remove("shake");
+  void el.offsetWidth;
+  el.classList.add("shake");
+}
+
+/* ---------- 터치무브 규칙이 적용된 입력 처리 ---------- */
+function onTap(ev){
+  if(busy||gameOver||(!pvp&&st.turn!=="w")) return;
+  audio(); // 첫 터치에서 오디오 활성화
+  const i=parseInt(ev.currentTarget.dataset.idx,10);
+  const p=st.b[i];
+
+  if(selected<0){
+    // 아직 말을 고르지 않음
+    if(!p){ return; }
+    const mine = pvp ? (st.turn==="w"?isW(p):!isW(p)) : isW(p);
+    if(!mine){ setStatus("⚠️ 그건 상대 말이에요!", "warn"); sndWarn(); shakeSq(i); return; }
+    const all=genLegal(st).filter(m=>m.f===i);
+    if(all.length===0){
+      setStatus("⚠️ 이 말은 지금 움직일 수 없어요. 다른 말을 골라요!", "warn");
+      sndWarn(); shakeSq(i); return;
+    }
+    selected=i; legalForSel=all; hintMove=null;
+    showPieceInfo(p);
+    setStatus("👆 표시된 칸으로 움직여요. (고른 말은 바꿀 수 없어요!)");
+    render();
+    return;
+  }
+
+  // 이미 말을 고른 상태 (터치무브: 변경 불가)
+  if(i===selected){
+    setStatus("이 말을 어디로 보낼까요? 표시된 칸을 눌러요!");
+    return;
+  }
+  const mv=legalForSel.find(m=>m.t===i);
+  if(!mv){
+    if(tut && p && isW(p)){ // 🎓 튜토리얼: 부담 없이 말 바꾸기 허용
+      const all=genLegal(st).filter(m=>m.f===i);
+      if(all.length){
+        selected=i; legalForSel=all; showPieceInfo(p); render();
+        setStatus("👆 표시된 칸으로 움직여 보세요!");
+        return;
+      }
+    }
+    if(p && isW(p)){
+      setStatus("🚫 한 번 고른 말은 바꿀 수 없어요! (진짜 체스 규칙이에요)", "warn");
+    }else{
+      setStatus("🚫 거기로는 갈 수 없어요! 표시된 칸만 가능해요.", "warn");
+    }
+    sndWarn(); shakeSq(i);
+    return;
+  }
+  playerMove(mv);
+}
+
+function pieceName(p){
+  return {P:"폰",N:"나이트",B:"비숍",R:"룩",Q:"퀸",K:"킹"}[p.toUpperCase()];
+}
+
+/* ---------- 말 이동 방법 패널 ---------- */
+const PIECE_INFO={
+  P:"앞으로 1칸씩 가요. 맨 처음 자리에서는 2칸도 갈 수 있어요. 상대 말은 <b>대각선 앞 1칸</b>만 잡을 수 있어요. 끝줄까지 가면 퀸으로 변신! 👑",
+  N:"<b>'ㄴ'자 모양</b>으로 폴짝 뛰어요! 앞으로 2칸 + 옆으로 1칸. 다른 말을 <b>뛰어넘을 수 있는 유일한 말</b>이에요.",
+  B:"<b>대각선</b>으로 원하는 만큼 쭉 가요. 자기가 시작한 색깔 칸만 평생 다녀요.",
+  R:"<b>가로와 세로</b>로 원하는 만큼 쭉 가요. 성처럼 튼튼한 말!",
+  Q:"<b>가로·세로·대각선</b> 어디로든 원하는 만큼 쭉! 가장 힘이 센 말이에요.",
+  K:"모든 방향으로 <b>딱 1칸</b>씩만 가요. 킹이 잡히면 지는 거니까 소중하게 지켜요! (한 번도 안 움직였다면 룩과 함께 '캐슬링'도 가능)"
+};
+function showPieceInfo(p){
+  const u=p.toUpperCase();
+  document.getElementById("moveInfo").innerHTML =
+    '<div class="mi-head"><div class="mi-glyph pc '+(isW(p)?"w":"b")+'" style="text-shadow:0 0 2px #999;">'+GLYPH[p]+'</div>'+
+    '<div class="mi-name">'+pieceName(p)+'</div></div>'+
+    '<div>'+PIECE_INFO[u]+'</div>';
+}
+function resetPieceInfo(){
+  document.getElementById("moveInfo").innerHTML =
+    '<div class="mi-hint">말을 고르면 여기에 움직이는 방법이 나와요!</div>';
+}
+
+/* ---------- 🎓 튜토리얼 (룰을 몰라도 직접 움직이며 배우기) ---------- */
+let tut=false, tutIdx=0;
+/* pieces: [칸번호, 말] 목록. 엔진 안정성을 위해 양쪽 킹을 항상 포함 */
+const LESSONS=[
+ {title:"폰", goal:"capture",
+  text:"폰은 앞으로 가지만, 잡을 땐 대각선 앞 1칸! 검은 폰을 잡아 보세요.",
+  praise:"폰은 앞으로 전진, 잡을 때만 대각선! 첫 규칙을 배웠어요.",
+  fail:"폰은 대각선으로만 잡을 수 있어요. 검은 폰을 잡아 봐요!",
+  pieces:[[56,"K"],[7,"k"],[52,"P"],[43,"p"]]},
+ {title:"나이트", goal:"capture",
+  text:"나이트는 'ㄴ'자로 폴짝! 검은 폰을 잡아 보세요.",
+  praise:"'ㄴ'자 점프 성공! 나이트는 말을 뛰어넘는 유일한 말이에요.",
+  fail:"'ㄴ'자 모양으로 뛰어서 검은 폰이 있는 칸에 도착해야 해요!",
+  pieces:[[56,"K"],[7,"k"],[35,"N"],[20,"p"]]},
+ {title:"비숍", goal:"capture",
+  text:"비숍은 대각선으로 쭉! 검은 폰을 잡아 보세요.",
+  praise:"대각선 길을 완벽하게 찾았어요!",
+  fail:"대각선으로 쭉 가면 검은 폰이 있어요. 다시 해봐요!",
+  pieces:[[56,"K"],[0,"k"],[35,"B"],[14,"p"]]},
+ {title:"룩", goal:"capture",
+  text:"룩은 가로·세로로 쭉! 검은 폰을 잡아 보세요.",
+  praise:"똑바로 쭉! 룩을 완벽하게 다뤘어요.",
+  fail:"룩은 가로나 세로로만 가요. 검은 폰을 잡아 봐요!",
+  pieces:[[56,"K"],[7,"k"],[35,"R"],[11,"p"]]},
+ {title:"퀸", goal:"capture",
+  text:"퀸은 가로·세로·대각선 모두 가능! 검은 폰을 잡아 보세요.",
+  praise:"가장 힘센 퀸까지 마스터!",
+  fail:"퀸은 어느 방향이든 쭉 갈 수 있어요. 검은 폰을 찾아 잡아요!",
+  pieces:[[56,"K"],[0,"k"],[35,"Q"],[7,"p"]]},
+ {title:"킹", goal:"capture",
+  text:"킹은 모든 방향으로 딱 1칸씩. 바로 앞의 검은 폰을 잡아 보세요.",
+  praise:"킹의 움직임도 배웠어요. 킹은 절대 잡히면 안 돼요!",
+  fail:"킹은 1칸씩만 움직여요. 바로 앞 검은 폰을 잡아요!",
+  pieces:[[36,"K"],[0,"k"],[28,"p"]]},
+ {title:"폰의 변신", goal:"promote",
+  text:"폰이 맨 끝줄에 도착하면 퀸으로 변신! 폰을 끝까지 보내 보세요.",
+  praise:"👑 퀸으로 변신! 폰을 끝까지 보내면 큰 상을 받아요.",
+  fail:"폰을 한 칸 앞으로 보내서 끝줄에 도착시켜 보세요!",
+  pieces:[[56,"K"],[7,"k"],[12,"P"]]},
+ {title:"캐슬링", goal:"castle",
+  text:"킹과 룩이 안 움직였다면 특별 이동! 킹을 눌러 두 칸 옆(g1)으로 보내 보세요.",
+  praise:"🏰 캐슬링 성공! 킹이 안전해지고 룩도 나왔어요.",
+  fail:"킹을 골라서 오른쪽으로 두 칸 이동하면 캐슬링이에요!",
+  cr:{K:true,Q:false,k:false,q:false},
+  pieces:[[60,"K"],[63,"R"],[0,"k"]]},
+ {title:"체크메이트", goal:"mate",
+  text:"마지막 시험! 퀸을 한 번 움직여 검은 킹을 체크메이트 해보세요. (힌트 버튼도 있어요)",
+  praise:"🏆 체크메이트! 이제 진짜 게임을 할 준비가 됐어요!",
+  fail:"검은 킹이 도망갈 곳이 없게 만들어야 해요. 힌트를 눌러 봐요!",
+  pieces:[[22,"K"],[56,"Q"],[6,"k"]]}
+];
+function tutState(L){
+  const b=new Array(64).fill(null);
+  let kW=60,kB=4;
+  for(const [i,p] of L.pieces){ b[i]=p; if(p==="K")kW=i; if(p==="k")kB=i; }
+  return {b, turn:"w", cr:L.cr?{...L.cr}:{K:false,Q:false,k:false,q:false}, ep:-1, kW, kB};
+}
+function tutGoalMet(L, mv, wasCap){
+  if(L.goal==="capture") return wasCap;
+  if(L.goal==="promote") return !!mv.promo;
+  if(L.goal==="castle")  return mv.flag==="c";
+  if(L.goal==="mate")    return genLegal(st).length===0 && inCheck(st,false);
+  return false;
+}
+function loadLesson(i){
+  tutIdx=i;
+  const L=LESSONS[i];
+  st=tutState(L);
+  selected=-1; legalForSel=[]; lastMove=null; gameOver=false; busy=false; hintMove=null;
+  capturedByPlayer=[]; capturedByAi=[];
+  resetPieceInfo();
+  document.getElementById("foeEmoji").textContent="🎓";
+  document.getElementById("foeName").textContent="레슨 "+(i+1)+". "+L.title;
+  document.getElementById("foeSub").textContent="차근차근 배워 봐요!";
+  document.getElementById("lvBadge").textContent=(i+1)+"/"+LESSONS.length;
+  document.getElementById("lvFill").style.width=((i+1)/LESSONS.length*100)+"%";
+  render();
+  setStatus("🎓 "+L.text);
+}
+function startTutorial(){
+  tut=true;
+  document.getElementById("menuScreen").classList.remove("show");
+  document.getElementById("pScreen").classList.remove("show");
+  document.getElementById("chipPlayer").textContent="🏠 메뉴";
+  loadLesson(0);
+}
+function tutFindGoalMove(){
+  const L=LESSONS[tutIdx];
+  for(const m of genLegal(st)){
+    let ok=false;
+    if(L.goal==="capture") ok=!!(m.cap||m.flag==="e");
+    else if(L.goal==="promote") ok=!!m.promo;
+    else if(L.goal==="castle") ok=m.flag==="c";
+    else if(L.goal==="mate"){
+      const u=applyMove(st,m);
+      ok=(genLegal(st).length===0 && inCheck(st,false));
+      undoMove(st,m,u);
+    }
+    if(ok) return m;
+  }
+  return null;
+}
+
+function playerMove(mv){
+  const wasCap = !!(mv.cap || mv.flag==="e");
+  const u=applyMove(st,mv);
+  if(u.cap){
+    capturedByPlayer.push(u.cap);
+    if(current && !tut) current.captures=(current.captures||0)+1; // 랭킹용 누적(튜토리얼 제외)
+  }
+  lastMove=mv; selected=-1; legalForSel=[]; hintMove=null;
+  resetPieceInfo();
+  wasCap ? sndCapture() : sndMove();
+  render();
+  animSlide(mv.f,mv.t);
+  if(tut){ // 🎓 튜토리얼: 목표 달성 판정
+    const L=LESSONS[tutIdx];
+    if(tutGoalMet(L, mv, wasCap)){
+      sndWin();
+      const last = tutIdx>=LESSONS.length-1;
+      modal("🎉","레슨 "+(tutIdx+1)+" 통과!",L.praise,
+        last ? "🎓 튜토리얼 완료! 메뉴로" : "다음 레슨 →",
+        ()=>{ if(last){ tut=false; showMenu(); } else loadLesson(tutIdx+1); });
+    }else{
+      sndWarn();
+      setStatus("🔁 "+L.fail, "warn");
+      busy=true;
+      setTimeout(()=>{ busy=false; loadLesson(tutIdx); }, 1500);
+    }
+    return;
+  }
+  if(mv.promo) setStatus("👑 폰이 퀸으로 변신했어요! 대단해요!", "good");
+  if(checkEnd()) return;
+  snapshotGame();
+  if(pvp){ if(inCheck(st, st.turn==="w")) sndCheck(); pvpTurnStatus(); return; }
+  if(inCheck(st,false)){ sndCheck(); setStatus("⚔️ 체크! 상대 킹을 공격했어요!", "good"); }
+  else if(!mv.promo){
+    setStatus(wasCap ? "😋 "+pieceName(u.cap)+"을(를) 잡았어요!" : FOES[level-1][0]+" 상대가 생각하는 중...");
+  }
+  aiTurn();
+}
+
+function aiTurn(){
+  busy=true;
+  setTimeout(()=>{
+    const mv=chooseAiMove(level);
+    if(!mv){ busy=false; checkEnd(); return; }
+    const u=applyMove(st,mv);
+    if(u.cap) capturedByAi.push(u.cap);
+    lastMove=mv;
+    (u.cap)?sndCapture():sndMove();
+    render();
+    animSlide(mv.f,mv.t);
+    busy=false;
+    if(checkEnd()) return;
+    snapshotGame();
+    if(inCheck(st,true)){
+      sndCheck();
+      setStatus("🛡️ 체크! 내 킹이 공격받고 있어요. 킹을 지켜요!", "warn");
+    }else{
+      setStatus("♟️ "+(current?current.name+"님":"내")+" 차례예요! 말을 골라 보세요.");
+    }
+  }, 400 + Math.random()*500);
+}
+
+/* ---------- 종료 판정 ---------- */
+function insufficient(){
+  const pieces=st.b.filter(Boolean);
+  if(pieces.length===2) return true;
+  if(pieces.length===3){
+    const minor=pieces.find(p=>{const u=p.toUpperCase(); return u==="B"||u==="N";});
+    if(minor) return true;
+  }
+  return false;
+}
+function checkEnd(){
+  const moves=genLegal(st);
+  if(moves.length===0){
+    if(inCheck(st, st.turn==="w")){
+      if(pvp) pvpEnd(st.turn==="w"?"b":"w");
+      else st.turn==="b" ? showWin() : showLose();
+    }else pvp ? pvpEnd(null,"스테일메이트") : showDraw("스테일메이트");
+    return true;
+  }
+  if(insufficient()){ pvp ? pvpEnd(null,"남은 말로는 체크메이트를 할 수 없어요") : showDraw("남은 말로는 체크메이트를 할 수 없어요"); return true; }
+  return false;
+}
+
+function confettiBurst(){
+  const em=["🎉","⭐","🏆","✨","🎈"];
+  for(let i=0;i<26;i++){
+    const s=document.createElement("div");
+    s.className="confetti";
+    s.textContent=em[i%em.length];
+    s.style.left=(Math.random()*100)+"vw";
+    s.style.animationDuration=(2+Math.random()*2)+"s";
+    s.style.animationDelay=(Math.random()*0.8)+"s";
+    document.body.appendChild(s);
+    setTimeout(()=>s.remove(), 5000);
+  }
+}
+function modal(emoji,title,text,btnLabel,onClick){
+  document.getElementById("mEmoji").textContent=emoji;
+  document.getElementById("mTitle").textContent=title;
+  document.getElementById("mText").textContent=text;
+  const btn=document.getElementById("mBtn");
+  btn.textContent=btnLabel;
+  btn.onclick=()=>{ overlay.classList.remove("show"); onClick(); };
+  overlay.classList.add("show");
+}
+function showWin(){
+  gameOver=true; sndWin(); confettiBurst();
+  if(current){
+    current.wins=(current.wins||0)+1; current.saved=null;
+    if(level<20) current.rankCaps=(current.rankCaps||0)+capturedByPlayer.length; // 레벨업 판만 랭킹 인정
+  }
+  if(level>=20){
+    modal("🏆","체스 챔피언!","전설의 용까지 모두 이겼어요! 20레벨 완전 정복! 랭킹 1위에 도전해요!","레벨 20 계속 연습하기",()=>{
+      saveProfiles(); startGame();
+    });
+  }else{
+    const next=FOES[level][1];
+    modal("🎉","승리! 레벨 업!",FOES[level-1][1]+"을(를) 이겼어요! 다음 상대는 "+next+"!","다음 레벨로! →",()=>{
+      level+=1; saveLevel(); startGame();
+    });
+  }
+  saveProfiles();
+}
+function showLose(){
+  gameOver=true; sndLose();
+  if(current){ current.losses=(current.losses||0)+1; current.saved=null; saveProfiles(); }
+  modal("💪","아쉽다! 다시 도전!","져도 괜찮아요. 한 판씩 둘 때마다 실력이 늘어요!","다시 도전하기",startGame);
+}
+function showDraw(reason){
+  gameOver=true;
+  if(current){ current.saved=null; saveProfiles(); }
+  modal("🤝","무승부!",reason+". 무승부예요. 한 번 더 해서 이겨 봐요!","다시 도전하기",startGame);
+}
+
+/* ---------- 힌트 ---------- */
+document.getElementById("btnHint").addEventListener("click", ()=>{
+  if(busy||gameOver) return;
+  audio();
+  if(tut){ // 🎓 튜토리얼: 목표를 이루는 수를 표시
+    const m=tutFindGoalMove();
+    if(m){
+      hintMove=m; selected=-1; legalForSel=[];
+      setStatus("💡 초록 테두리 말을 초록 칸으로 옮겨 보세요!", "good");
+      render();
+      setTimeout(()=>{ if(hintMove){ hintMove=null; render(); } }, 3000);
+    }
+    return;
+  }
+  if(st.turn!=="w"||selected>=0) return;
+  const moves=genLegal(st);
+  if(moves.length===0) return;
+  let best=null, bestSc=-Infinity;
+  for(const m of moves){
+    const u=applyMove(st,m);
+    const sc=-negamax(st,1,-100000,100000,1);
+    undoMove(st,m,u);
+    if(sc>bestSc){ bestSc=sc; best=m; }
+  }
+  hintMove=best;
+  setStatus("💡 초록 테두리 말을 초록 칸으로 옮기면 좋아요!", "good");
+  render();
+  setTimeout(()=>{ if(hintMove){ hintMove=null; render(); } }, 3000);
+});
+
+document.getElementById("btnMenu").addEventListener("click", ()=>{
+  if(busy) return;
+  if(tut){ tut=false; showMenu(); return; }
+  if(pvp){ showMenu(); return; }                 // 대전: 전적 기록 없이 종료
+  if(!gameOver) snapshotGame();                  // 싱글: 이어하기 저장 후 이동
+  showMenu();
+});
+document.getElementById("btnNew").addEventListener("click", ()=>{
+  if(busy) return;
+  if(tut){ loadLesson(tutIdx); return; } // 🎓 튜토리얼: 현재 레슨 재시작
+  if(pvp){ startPvp(pvp.w, pvp.b); return; } // ⚔️ 대전: 같은 둘이서 재추첨 후 새 판
+  if(current){ current.saved=null; saveProfiles(); } // 저장된 판도 새로 시작
+  startGame();
+});
+
+/* ---------- 게임 시작 (이어하기 지원) ---------- */
+function startGame(){
+  level = current ? Math.min(20, Math.max(1, current.level||1)) : 1;
+  const sv = (current && current.saved && current.saved.level===level) ? current.saved : null;
+  if(sv){
+    st = {b:sv.b.slice(), turn:sv.turn, cr:{...sv.cr}, ep:sv.ep, kW:sv.kW, kB:sv.kB};
+    lastMove = sv.last;
+    capturedByPlayer = sv.cp.slice();
+    capturedByAi = sv.ca.slice();
+  }else{
+    st = newState();
+    lastMove = null; capturedByPlayer=[]; capturedByAi=[];
+  }
+  selected=-1; legalForSel=[]; busy=false; gameOver=false; hintMove=null;
+  resetPieceInfo();
+  setFoe();
+  render();
+  if(sv){
+    setStatus("💾 "+current.name+" — 하던 판을 이어서 계속해요!", "good");
+    if(st.turn==="b") aiTurn(); // 상대 차례에 껐다면 상대가 이어서 둠
+  }else{
+    setStatus("♟️ "+(current?current.name+" — ":"")+FOES[level-1][1]+"에게 도전! 흰색 말이 내 거예요.");
+  }
+}
+
+/* ---------- 프로필 화면 ---------- */
+const pScreen=document.getElementById("pScreen");
+const pNew=document.getElementById("pNew");
+let pickedAv=AVATARS[0];
+
+function esc(s){ return String(s).replace(/[<>&"]/g, c=>({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[c])); }
+
+function renderProfiles(){
+  const list=document.getElementById("pList");
+  list.innerHTML="";
+  for(const p of profiles){
+    const card=document.createElement("button");
+    card.className="pcard";
+    card.innerHTML =
+      '<div class="av">'+p.avatar+'</div>'+
+      '<div><div class="nm">'+esc(p.name)+'</div>'+
+      '<div class="dt">Lv.'+p.level+' · 잡은 말 '+(p.captures||0)+'개 · '+
+      (p.wins||0)+'승 '+(p.losses||0)+'패'+(p.saved?" · 💾 이어하기":"")+'</div></div>';
+    const del=document.createElement("button");
+    del.className="del"; del.textContent="✕";
+    del.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      if(confirm(p.name+" 프로필을 지울까요? 기록이 모두 사라져요!")){
+        profiles=profiles.filter(x=>x.id!==p.id);
+        saveProfiles(); renderProfiles();
+      }
+    });
+    card.appendChild(del);
+    card.addEventListener("click",()=>selectProfile(p));
+    list.appendChild(card);
+  }
+}
+function selectProfile(p){
+  current=p; tut=false;
+  try{ localStorage.setItem("chessKidCurrent", String(p.id)); }catch(e){}
+  document.getElementById("chipPlayer").textContent = p.avatar+" "+p.name;
+  pScreen.classList.remove("show");
+  document.getElementById("menuScreen").classList.remove("show");
+  startGame();
+}
+function buildAvGrid(){
+  const g=document.getElementById("avGrid");
+  g.innerHTML="";
+  for(const a of AVATARS){
+    const b=document.createElement("button");
+    b.className="avbtn"+(a===pickedAv?" sel":"");
+    b.textContent=a;
+    b.addEventListener("click",()=>{
+      pickedAv=a;
+      [...g.children].forEach(x=>x.classList.toggle("sel", x.textContent===a));
+    });
+    g.appendChild(b);
+  }
+}
+document.getElementById("pAddBtn").addEventListener("click",()=>{
+  pNew.style.display = pNew.style.display==="none" ? "block" : "none";
+});
+document.getElementById("pCreate").addEventListener("click",()=>{
+  const name=document.getElementById("pName").value.trim();
+  if(!name){ alert("이름을 입력해 주세요!"); return; }
+  // 예전 버전에서 혼자 쓰던 레벨 기록이 있으면 첫 프로필이 물려받음
+  const oldLv = profiles.length===0
+    ? Math.min(20, Math.max(1, parseInt(localStorage.getItem("chessKidLevel")||"1",10)))
+    : 1;
+  const p={id:Date.now(), name, avatar:pickedAv, level:oldLv,
+           wins:0, losses:0, captures:0, rankCaps:0, saved:null};
+  profiles.push(p); saveProfiles();
+  document.getElementById("pName").value="";
+  pNew.style.display="none";
+  selectProfile(p);
+});
+document.getElementById("chipPlayer").addEventListener("click",()=>{
+  if(busy) return;
+  if(!tut) snapshotGame();   // 나가기 전 현재 판 저장
+  tut=false;
+  showMenu();
+});
+
+/* ---------- 메인 메뉴 ---------- */
+const menuScreen=document.getElementById("menuScreen");
+function showMenu(){
+  pScreen.classList.remove("show");
+  menuScreen.classList.add("show");
+  pvp=null; document.body.classList.remove("pvp");
+}
+/* ========== ⚔️ 대전 모드 ========== */
+const pvpOverlay=document.getElementById("pvpOverlay");
+let pvpPick=null;
+function openPvpChooser(){
+  if(profiles.length<2){
+    modal("⚔️","대전 모드","등록된 가족이 2명 이상 있어야 대전할 수 있어요! 먼저 [새 가족 등록]을 해주세요.","확인",()=>{});
+    return;
+  }
+  pvpPick=null; renderPvpList();
+  pvpOverlay.classList.add("show");
+}
+function renderPvpList(){
+  document.getElementById("pvpTitle").textContent = pvpPick ? "상대 플레이어는 누구?" : "첫 번째 플레이어는 누구?";
+  const list=document.getElementById("pvpList"); list.innerHTML="";
+  profiles.filter(p=>!pvpPick||p.id!==pvpPick.id).forEach(p=>{
+    const row=document.createElement("div");
+    row.className="rankrow"; row.style.cursor="pointer";
+    row.innerHTML='<div style="font-size:26px;">'+p.avatar+'</div><div><div class="rnm">'+esc(p.name)+'</div>'
+      +'<div class="rdt">⚔️ 대전 '+(p.pvpW||0)+'승 '+(p.pvpL||0)+'패</div></div>';
+    row.addEventListener("pointerdown",()=>{
+      if(!pvpPick){ pvpPick=p; renderPvpList(); }
+      else{ pvpOverlay.classList.remove("show"); startPvp(pvpPick,p); }
+    });
+    list.appendChild(row);
+  });
+}
+document.getElementById("menuPvp").addEventListener("click",openPvpChooser);
+document.getElementById("pvpCancel").addEventListener("click",()=>pvpOverlay.classList.remove("show"));
+function startPvp(a,b){
+  const flip=Math.random()<0.5;           // 🎲 선공(흰색) 랜덤 배정
+  pvp={ w: flip?a:b, b: flip?b:a };
+  current=null; tut=false;
+  st=newState();
+  lastMove=null; capturedByPlayer=[]; capturedByAi=[];
+  selected=-1; legalForSel=[]; busy=false; gameOver=false; hintMove=null;
+  resetPieceInfo();
+  document.body.classList.add("pvp");
+  menuScreen.classList.remove("show");
+  pScreen.classList.remove("show");
+  render(); updatePvpBadges();
+  modal("🎲","선공 뽑기 결과!","⬜ 흰색(선공)·왼쪽: "+pvp.w.avatar+" "+pvp.w.name+" / ⬛ 검은색(후공)·오른쪽: "+pvp.b.avatar+" "+pvp.b.name,"⚔️ 대결 시작!",()=>{ pvpTurnStatus(); });
+}
+function pvpTurnStatus(){
+  const side=st.turn, P=pvp[side];
+  const chk=inCheck(st, side==="w");
+  setStatus((side==="w"?"⬜ ":"⬛ ")+P.avatar+" "+P.name+"님 차례예요!"+(chk?" 🛡️ 체크!":""), chk?"warn":"");
+  updatePvpBadges();
+}
+function updatePvpBadges(){
+  const L=document.getElementById("pvpLeft"), R=document.getElementById("pvpRight");
+  if(!pvp||!L||!R) return;
+  const card=(P,c)=>'<div class="pb-av">'+P.avatar+'</div><div class="pb-nm">'+esc(P.name)+'</div>'
+    +'<div class="pb-cl">'+(c==="w"?"⬜ 흰색·선공":"⬛ 검은색·후공")+'</div>'
+    +'<div class="pb-rec">대전 '+(P.pvpW||0)+'승 '+(P.pvpL||0)+'패</div>';
+  L.innerHTML=card(pvp.w,"w"); R.innerHTML=card(pvp.b,"b"); // 왼쪽=⬜, 오른쪽=⬛ (군대 방향과 일치)
+  L.classList.toggle("on", st.turn==="w" && !gameOver);
+  R.classList.toggle("on", st.turn==="b" && !gameOver);
+}
+function pvpEnd(winColor,drawReason){
+  gameOver=true; updatePvpBadges();
+  if(winColor){
+    const W=pvp[winColor], Lo=pvp[winColor==="w"?"b":"w"];
+    sndWin(); confettiBurst();
+    W.pvpW=(W.pvpW||0)+1; Lo.pvpL=(Lo.pvpL||0)+1; saveProfiles();
+    modal("🏆","체크메이트!",W.avatar+" "+W.name+"님("+(winColor==="w"?"⬜ 흰색":"⬛ 검은색")+") 승리! 대전 전적 "+W.pvpW+"승이 되었어요!","🏠 메뉴로",showMenu);
+  }else{
+    modal("🤝","무승부!",drawReason+" — 둘 다 정말 잘 싸웠어요!","🏠 메뉴로",showMenu);
+  }
+}
+function openProfileScreen(withForm){
+  renderProfiles();
+  pNew.style.display = (withForm || profiles.length===0) ? "block" : "none";
+  menuScreen.classList.remove("show");
+  pScreen.classList.add("show");
+}
+document.getElementById("menuPlay").addEventListener("click",()=>openProfileScreen(false));
+document.getElementById("menuAdd").addEventListener("click",()=>openProfileScreen(true));
+document.getElementById("menuRank").addEventListener("click",()=>{
+  renderRank(); rankOverlay.classList.add("show");
+});
+document.getElementById("menuTut").addEventListener("click",startTutorial);
+document.getElementById("pBack").addEventListener("click",showMenu);
+
+/* ---------- 랭킹 (레벨 순 → 동레벨이면 잡은 말 순) ---------- */
+const rankOverlay=document.getElementById("rankOverlay");
+function renderRank(){
+  const sorted=[...profiles].sort((a,b)=>
+    (b.level-a.level) ||
+    ((b.rankCaps||0)-(a.rankCaps||0)) ||
+    ((b.wins||0)-(a.wins||0))
+  );
+  const list=document.getElementById("rankList");
+  list.innerHTML="";
+  const medals=["🥇","🥈","🥉"];
+  sorted.forEach((p,i)=>{
+    const row=document.createElement("div");
+    row.className="rankrow"+(current&&p.id===current.id?" me":"");
+    row.innerHTML =
+      '<div class="medal">'+(medals[i]||(i+1))+'</div>'+
+      '<div style="font-size:24px;">'+p.avatar+'</div>'+
+      '<div><div class="rnm">'+esc(p.name)+'</div>'+
+      '<div class="rdt">⚔️ 레벨업 잡은 말 '+(p.rankCaps||0)+'개 · '+(p.wins||0)+'승 '+(p.losses||0)+'패</div></div>'+
+      '<div class="rlv">Lv.'+p.level+'</div>';
+    list.appendChild(row);
+  });
+  if(sorted.length===0)
+    list.innerHTML='<div class="rankrow"><div class="rdt">아직 등록된 가족이 없어요!</div></div>';
+}
+document.getElementById("chipRank").addEventListener("click",()=>{
+  renderRank();
+  rankOverlay.classList.add("show");
+});
+document.getElementById("rankClose").addEventListener("click",()=>{
+  rankOverlay.classList.remove("show");
+});
+
+/* ---------- 앱 시작: 항상 메인 메뉴부터 ---------- */
+loadProfiles();
+buildAvGrid();
+st=newState(); render(); // 메뉴 화면 뒤 배경용 기본 판
+document.getElementById("chipPlayer").textContent="🏠 메뉴";
+menuScreen.classList.add("show");
+</script>
+</body>
+</html>
