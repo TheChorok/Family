@@ -196,6 +196,7 @@ body.pvp .foe-card,body.pvp #btnHint{display:none !important;}
     <p id="cloudStatus" style="font-weight:800;font-size:14px;"></p>
     <input class="txt" id="cloudCode" type="password" maxlength="30" placeholder="우리끼리 정한 암호">
     <button class="btn green" id="cloudConnect" style="width:100%;margin-bottom:8px;">🔗 연결하기</button>
+    <button class="btn" id="cloudTestBtn" style="width:100%;margin-bottom:8px;">📡 연결 테스트</button>
     <button class="btn red" id="cloudOff" style="width:100%;margin-bottom:8px;">🔌 연결 해제</button>
     <button class="btn" id="cloudClose" style="width:100%;">닫기</button>
   </div>
@@ -681,7 +682,7 @@ function openProfiles(){
   menuScreen.classList.remove("show");
   pScreen.classList.add("show");
 }
-$("menuPlay").addEventListener("click",()=>{ cloudSync(); openProfiles(); });
+$("menuPlay").addEventListener("click",async ()=>{ await cloudSync(); openProfiles(); });
 $("pBack").addEventListener("click",showMenu);
 /* 등록 */
 let regAv=AVATARS[0];
@@ -848,6 +849,18 @@ $("menuCloud").addEventListener("click",()=>{
   $("cloudOverlay").classList.add("show");
 });
 $("cloudClose").addEventListener("click",()=>$("cloudOverlay").classList.remove("show"));
+$("cloudTestBtn").addEventListener("click",async ()=>{
+  if(!famCode()){ $("cloudStatus").textContent="⚠️ 먼저 코드를 연결하세요!"; return; }
+  $("cloudStatus").textContent="⏳ 서버 왕복 테스트 중...";
+  try{
+    const url=FB_URL+"/families/"+cHash("fam:"+famCode())+"/_ping.json";
+    const t=String(Date.now());
+    const w=await fetch(url,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(t)});
+    if(!w.ok){ $("cloudStatus").textContent="❌ 쓰기 실패 (HTTP "+w.status+") — Firebase 규칙 확인"; return; }
+    const r=await fetch(url); const v=r.ok?await r.json():null;
+    $("cloudStatus").textContent = v===t ? "✅ 서버 정상! 쓰기·읽기 성공" : "❌ 읽기 실패 (HTTP "+r.status+")";
+  }catch(e){ $("cloudStatus").textContent="❌ 서버에 닿지 못함 — 인터넷 확인"; }
+});
 $("cloudOff").addEventListener("click",()=>{ try{localStorage.removeItem("familyCode");}catch(e){}
   $("cloudStatus").textContent="현재: 미연결"; $("cloudOff").style.display="none"; });
 $("cloudConnect").addEventListener("click",async ()=>{
@@ -873,6 +886,7 @@ refreshBoardBtn();
 $("menuTut").addEventListener("click",()=>{ if(boardMode!=="classic"){ boardMode="classic"; try{localStorage.setItem("morrisBoard","classic");}catch(e){} refreshBoardBtn(); } startTutorial(); });
 loadProfiles();
 cloudSync();
+try{ window.addEventListener("focus",()=>cloudSync()); }catch(e){}
 </script>
 </body>
 </html>

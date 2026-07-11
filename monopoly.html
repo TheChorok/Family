@@ -1287,6 +1287,18 @@ function showCloud(){
       : '<div class="big-emoji">⚠️</div><p style="text-align:center;">서버에 닿지 못했어요. 인터넷 연결을 확인해주세요.<br>(코드는 저장되어 다음에 자동 재시도합니다)</p>',
       [["확인","orange",closeModal]]);
   }]];
+  btns.push(["📡 연결 테스트","",async()=>{
+    if(!famCode()){ $("fErr").textContent="먼저 코드를 연결하세요!"; return; }
+    $("fErr").textContent="⏳ 서버 왕복 테스트 중...";
+    try{
+      const url=FB_URL+"/families/"+pHash("fam:"+famCode())+"/_ping.json";
+      const t=String(Date.now());
+      const w=await fetch(url,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(t)});
+      if(!w.ok){ $("fErr").textContent="❌ 쓰기 실패 (HTTP "+w.status+") — Firebase 규칙 확인"; return; }
+      const r=await fetch(url); const v=r.ok?await r.json():null;
+      $("fErr").textContent = v===t ? "✅ 서버 정상! 쓰기·읽기 성공" : "❌ 읽기 실패 (HTTP "+r.status+")";
+    }catch(e){ $("fErr").textContent="❌ 서버에 닿지 못함 — 인터넷 확인"; }
+  }]);
   if(on) btns.push(["🔌 연결 해제","red",()=>{ try{localStorage.removeItem("familyCode");}catch(e){} showCloud(); }]);
   btns.push(["닫기","",closeModal]);
   showModal("☁️ 가족 서버", h, btns);
@@ -1303,6 +1315,10 @@ function askPw(prof,onOk){
      ["취소","",closeModal]]);
 }
 function showProfiles(){
+  cloudSync().then(ok=>{ if(ok && $("mTitle").textContent==="👤 가족 등록") showProfiles0(); });
+  showProfiles0();
+}
+function showProfiles0(){
   const ps=getProfs();
   let h='<p style="font-size:13px;line-height:1.5;">닉네임·전용 말·비밀번호를 등록해두면, 게임 참가 때 <b>비밀번호를 아는 본인만</b> 그 이름으로 플레이할 수 있어요. 전적도 자동 기록됩니다!</p>';
   if(!ps.length) h+='<p style="opacity:.5;text-align:center;">아직 등록된 가족이 없어요.</p>';
@@ -1312,7 +1328,7 @@ function showProfiles(){
   showModal("👤 가족 등록", h, [["➕ 새 가족 등록","orange",showRegister],["닫기","",closeModal]]);
   $("mBody").querySelectorAll("[data-del]").forEach(b=>b.addEventListener("pointerdown",()=>{
     const i=+b.dataset.del, ps2=getProfs();
-    askPw(ps2[i], ()=>{ ps2.splice(i,1); saveProfs(ps2); showProfiles(); });
+    askPw(ps2[i], ()=>{ ps2.splice(i,1); saveProfs(ps2); showProfiles0(); });
   }));
 }
 function showRegister(){
@@ -1331,16 +1347,17 @@ function showRegister(){
       if(pw.length<4){ err.textContent="비밀번호는 4자 이상!"; return; }
       if(pw!==pw2){ err.textContent="비밀번호 확인이 달라요!"; return; }
       ps.push({name,token:tok,pw:pHash(pw),wins:0,games:0});
-      saveProfs(ps); showProfiles();
+      saveProfs(ps); showProfiles0();
     }],
-    ["← 뒤로","",showProfiles]]);
+    ["← 뒤로","",showProfiles0]]);
   $("mBody").querySelectorAll(".tok").forEach(el=>el.addEventListener("pointerdown",()=>{
     tok=el.dataset.t;
     $("mBody").querySelectorAll(".tok").forEach(x=>x.classList.toggle("sel",x===el));
   }));
 }
-function showRanking(){
-  cloudSync();
+async function showRanking(){
+  showModal("🏆 가족 랭킹",'<p style="text-align:center;opacity:.6;">⏳ 서버 확인 중...</p>',[["닫기","orange",closeModal]]);
+  await cloudSync();
   const ps=getProfs().slice().sort((a,b)=>b.wins-a.wins||a.games-b.games);
   let h='';
   if(!ps.length) h='<p style="opacity:.5;text-align:center;">등록된 가족이 없어요.<br>[👤 가족 등록]에서 먼저 등록해요!</p>';
@@ -1583,6 +1600,7 @@ $("mRules").addEventListener("pointerdown",showRules);
 $("mProf").addEventListener("pointerdown",showProfiles);
 $("mRank").addEventListener("pointerdown",showRanking);
 $("mCloud").addEventListener("pointerdown",showCloud);
+try{ window.addEventListener("focus",()=>cloudSync()); }catch(e){}
 cloudSync(); // 시작 시 자동 동기화 (코드 미설정이면 무시)
 toMenu();
 </script>

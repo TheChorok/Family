@@ -385,6 +385,7 @@
     <input id="cloudCode" type="password" maxlength="30" placeholder="우리끼리 정한 암호"
       style="width:100%;border:3px solid #D6E0EA;border-radius:12px;padding:12px;font-family:inherit;font-size:16px;box-sizing:border-box;margin-bottom:10px;">
     <button class="btn green" id="cloudConnect" style="width:100%;margin-bottom:8px;">🔗 연결하기</button>
+    <button class="btn" id="cloudTest" style="width:100%;margin-bottom:8px;">📡 연결 테스트</button>
     <button class="btn red" id="cloudOff" style="width:100%;margin-bottom:8px;">🔌 연결 해제</button>
     <button class="btn" id="cloudClose" style="width:100%">닫기</button>
   </div>
@@ -1417,6 +1418,7 @@ function openCloud(){
 }
 document.getElementById("menuCloud").addEventListener("click",openCloud);
 document.getElementById("cloudClose").addEventListener("click",()=>cloudOverlay.classList.remove("show"));
+document.getElementById("cloudTest").addEventListener("click",cloudTest);
 document.getElementById("cloudOff").addEventListener("click",()=>{
   try{ localStorage.removeItem("familyCode"); }catch(e){}
   openCloud();
@@ -1432,6 +1434,22 @@ document.getElementById("cloudConnect").addEventListener("click",async ()=>{
   document.getElementById("cloudOff").style.display = famCode() ? "block" : "none";
 });
 cloudSync(); // 시작 시 자동 동기화
+try{ window.addEventListener("focus",()=>cloudSync()); }catch(e){}
+/* 📡 연결 테스트 */
+async function cloudTest(){
+  const stEl=document.getElementById("cloudStatus");
+  if(!famCode()){ stEl.textContent="⚠️ 먼저 가족 코드를 연결하세요!"; return; }
+  stEl.textContent="⏳ 서버 왕복 테스트 중...";
+  try{
+    const url=FB_URL+"/families/"+cHash("fam:"+famCode())+"/_ping.json";
+    const t=String(Date.now());
+    const w=await fetch(url,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(t)});
+    if(!w.ok){ stEl.textContent="❌ 쓰기 실패 (HTTP "+w.status+") — Firebase 규칙을 확인하세요"; return; }
+    const r=await fetch(url);
+    const v=r.ok?await r.json():null;
+    stEl.textContent = v===t ? "✅ 서버 정상! 쓰기·읽기 모두 성공" : "❌ 읽기 실패 (HTTP "+r.status+")";
+  }catch(e){ stEl.textContent="❌ 서버에 닿지 못함 — 인터넷/주소 확인"; }
+}
 document.getElementById("pvpCancel").addEventListener("click",()=>pvpOverlay.classList.remove("show"));
 function startPvp(a,b){
   const flip=Math.random()<0.5;           // 🎲 선공(흰색) 랜덤 배정
@@ -1475,6 +1493,7 @@ function pvpEnd(winColor,drawReason){
   }
 }
 function openProfileScreen(withForm){
+  cloudSync().then(ok=>{ if(ok){ renderProfiles(); } }); // 서버 최신본 도착 시 갱신
   renderProfiles();
   pNew.style.display = (withForm || profiles.length===0) ? "block" : "none";
   menuScreen.classList.remove("show");
