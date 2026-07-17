@@ -1529,7 +1529,7 @@ function modalWithReview(em,title,txt,btn,cb){
   rb.style.cssText="width:100%;margin-bottom:8px;background:#3F7FD6;box-shadow:0 3px 0 #2C5FA6;";
   rb.textContent="📊 복기 먼저 보기";
   rb.addEventListener("click",()=>{
-    document.getElementById("mOverlay").classList.remove("show");
+    document.getElementById("overlay").classList.remove("show");
     openReview();
   });
   mb.parentNode.insertBefore(rb,mb);
@@ -1683,7 +1683,7 @@ function openReview(){
     // 승률 곡선: 초기국면 + 각 수 이후
     rvProbs=[50];
     for(const e of moveLog) rvProbs.push(toProb(evalWhite(e.snap)));
-    document.getElementById("mOverlay").classList.remove("show");
+    document.getElementById("overlay").classList.remove("show");
     document.getElementById("mBtn").style.display="block";
     buildReviewSummary();
     document.getElementById("reviewOverlay").classList.add("show");
