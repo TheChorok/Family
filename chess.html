@@ -1039,14 +1039,14 @@ function onFlag(side){
     sndWin(); confettiBurst();
     W.pvpW=(W.pvpW||0)+1; L.pvpL=(L.pvpL||0)+1; saveProfiles();
     endInfo={res:"time",winSide:winC};
-    modal("⏰","시간 초과!",L.avatar+" "+L.name+"의 시간이 다 됐어요! "+W.avatar+" "+W.name+" 승리!","🏠 메뉴로",showMenu);
+    modalWithReview("⏰","시간 초과!",L.avatar+" "+L.name+"의 시간이 다 됐어요! "+W.avatar+" "+W.name+" 승리!","🏠 메뉴로",showMenu);
     return;
   }
   if(side==="w"){
     sndLose();
     if(current){ current.losses=(current.losses||0)+1; current.saved=null; saveProfiles(); }
     endInfo={res:"time",winSide:"b"};
-    modal("⏰","시간 초과!","내 시간이 다 떨어졌어요… 시계를 보면서 두는 연습을 해봐요!","다시 도전!",startGame);
+    modalWithReview("⏰","시간 초과!","내 시간이 다 떨어졌어요… 시계를 보면서 두는 연습을 해봐요!","다시 도전!",startGame);
   }else{
     sndWin(); confettiBurst();
     if(current){
@@ -1054,8 +1054,8 @@ function onFlag(side){
       if(level<MAXLV) current.rankCaps=(current.rankCaps||0)+capturedByPlayer.length;
     }
     endInfo={res:"time",winSide:"w"};
-    if(level>=MAXLV){ modal("🏆","시간승!","상대의 시간이 다 됐어요! 승리!","계속 연습하기",()=>{ saveProfiles(); startGame(); }); }
-    else modal("🎉","시간승! 레벨 업!","상대 시간이 다 됐어요! 다음 상대에게 도전!","다음 레벨로! →",()=>{ level+=1; saveLevel(); startGame(); });
+    if(level>=MAXLV){ modalWithReview("🏆","시간승!","상대의 시간이 다 됐어요! 승리!","계속 연습하기",()=>{ saveProfiles(); startGame(); }); }
+    else{ level+=1; saveLevel(); modalWithReview("🎉","시간승! 레벨 업!","상대 시간이 다 됐어요! 다음 상대에게 도전!","다음 레벨로! →",startGame); }
     saveProfiles();
   }
 }
@@ -1433,6 +1433,7 @@ function confettiBurst(){
   }
 }
 function modal(emoji,title,text,btnLabel,onClick){
+  const oldRv=document.getElementById("rvModalBtn"); if(oldRv)oldRv.remove();
   document.getElementById("mEmoji").textContent=emoji;
   document.getElementById("mTitle").textContent=title;
   document.getElementById("mText").textContent=text;
@@ -1449,14 +1450,13 @@ function showWin(){
     if(level<MAXLV) current.rankCaps=(current.rankCaps||0)+capturedByPlayer.length; // 레벨업 판만 랭킹 인정
   }
   if(level>=MAXLV){
-    modal("🏆","체스 챔피언!","그랜드마스터까지 모두 이겼어요! 30레벨 완전 정복! 진짜 대회에 나가도 될 실력이에요!","레벨 30 계속 연습하기",()=>{
+    modalWithReview("🏆","체스 챔피언!","그랜드마스터까지 모두 이겼어요! 30레벨 완전 정복! 진짜 대회에 나가도 될 실력이에요!","레벨 30 계속 연습하기",()=>{
       saveProfiles(); startGame();
     });
   }else{
-    const next=FOES[level][1];
-    modal("🎉","승리! 레벨 업!",FOES[level-1][1]+"을(를) 이겼어요! 다음 상대는 "+next+"!","다음 레벨로! →",()=>{
-      level+=1; saveLevel(); startGame();
-    });
+    const beaten=FOES[level-1][1], next=FOES[level][1];
+    level+=1; saveLevel(); // 레벨업 즉시 확정 (복기 후에도 유지)
+    modalWithReview("🎉","승리! 레벨 업!",beaten+"을(를) 이겼어요! 다음 상대는 "+next+"! (복기를 먼저 봐도 레벨업은 저장돼요)","다음 레벨로! →",startGame);
   }
   saveProfiles();
 }
@@ -1464,13 +1464,13 @@ function showLose(){
   endInfo={res:'mate',winSide:'b'}; showReviewBtn();
   gameOver=true; sndLose();
   if(current){ current.losses=(current.losses||0)+1; current.saved=null; saveProfiles(); }
-  modal("💪","아쉽다! 다시 도전!","져도 괜찮아요. 한 판씩 둘 때마다 실력이 늘어요!","다시 도전하기",startGame);
+  modalWithReview("💪","아쉽다! 다시 도전!","져도 괜찮아요. 복기에서 어디가 아쉬웠는지 보면 실력이 쑥쑥 늘어요!","다시 도전하기",startGame);
 }
 function showDraw(reason){
   endInfo={res:'draw',reason:reason}; showReviewBtn();
   gameOver=true;
   if(current){ current.saved=null; saveProfiles(); }
-  modal("🤝","무승부!",reason+". 무승부예요. 한 번 더 해서 이겨 봐요!","다시 도전하기",startGame);
+  modalWithReview("🤝","무승부!",reason+". 무승부예요. 한 번 더 해서 이겨 봐요!","다시 도전하기",startGame);
 }
 
 /* ---------- 힌트 ---------- */
@@ -1519,6 +1519,21 @@ document.getElementById("btnNew").addEventListener("click", ()=>{
 });
 
 /* ---------- 게임 시작 (이어하기 지원) ---------- */
+/* 결과 팝업 안에 [복기 먼저 보기] 버튼을 넣어주는 헬퍼 */
+function modalWithReview(em,title,txt,btn,cb){
+  modal(em,title,txt,btn,cb);
+  if(tut||moveLog.length<4)return;
+  const mb=document.getElementById("mBtn");
+  const rb=document.createElement("button");
+  rb.id="rvModalBtn"; rb.className="btn";
+  rb.style.cssText="width:100%;margin-bottom:8px;background:#3F7FD6;box-shadow:0 3px 0 #2C5FA6;";
+  rb.textContent="📊 복기 먼저 보기";
+  rb.addEventListener("click",()=>{
+    document.getElementById("mOverlay").classList.remove("show");
+    openReview();
+  });
+  mb.parentNode.insertBefore(rb,mb);
+}
 function showReviewBtn(){ clockStop(); if(!tut && moveLog.length>3){ const b=document.getElementById("btnReview"); if(b)b.style.display="block"; } }
 function startGame(){
   recReset();
@@ -1786,7 +1801,7 @@ function exitReplay(){
   st=rvRealSt; lastMove=rvRealLast; rvRealSt=null; rvRealLast=null;
   document.getElementById("rvNav").style.display="none";
   selected=-1; legalForSel=[]; render();
-  setStatus("복기를 마쳤어요. [📊 복기]로 다시 볼 수 있어요!");
+  setStatus("복기 끝! [🔄 다시 시작]을 누르면 이어서 도전하고, [📊 복기]로 또 볼 수 있어요.");
 }
 document.getElementById("btnReview").addEventListener("click",openReview);
 document.getElementById("rvClose").addEventListener("click",()=>document.getElementById("reviewOverlay").classList.remove("show"));
@@ -1903,9 +1918,9 @@ function pvpEnd(winColor,drawReason){
     const W=pvp[winColor], Lo=pvp[winColor==="w"?"b":"w"];
     sndWin(); confettiBurst();
     W.pvpW=(W.pvpW||0)+1; Lo.pvpL=(Lo.pvpL||0)+1; saveProfiles();
-    modal("🏆","체크메이트!",W.avatar+" "+W.name+"님("+(winColor==="w"?"⬜ 흰색":"⬛ 검은색")+") 승리! 대전 전적 "+W.pvpW+"승이 되었어요!","🏠 메뉴로",showMenu);
+    modalWithReview("🏆","체크메이트!",W.avatar+" "+W.name+"님("+(winColor==="w"?"⬜ 흰색":"⬛ 검은색")+") 승리! 대전 전적 "+W.pvpW+"승이 되었어요!","🏠 메뉴로",showMenu);
   }else{
-    modal("🤝","무승부!",drawReason+" — 둘 다 정말 잘 싸웠어요!","🏠 메뉴로",showMenu);
+    modalWithReview("🤝","무승부!",drawReason+" — 둘 다 정말 잘 싸웠어요!","🏠 메뉴로",showMenu);
   }
 }
 function openProfileScreen(withForm){
