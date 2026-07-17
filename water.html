@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>오늘의 물</title>
+
+<!-- 홈 화면 추가 시 앱처럼 보이게 하는 설정 -->
+<meta name="theme-color" content="#0E7FA8">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="오늘의 물">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>💧</text></svg>">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230E7FA8'/><text x='50' y='72' font-size='60' text-anchor='middle'>💧</text></svg>">
+
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif;
+    background: linear-gradient(180deg, #EAF6FA 0%, #F7FBFD 40%);
+    min-height: 100vh;
+    color: #123647;
+  }
+  #app { max-width: 480px; margin: 0 auto; min-height: 100vh; }
+  button {
+    font-family: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    border: none;
+    background: none;
+  }
+
+  /* ── 헤더 ── */
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px 8px;
+  }
+  .brand { display: flex; align-items: center; gap: 6px; }
+  .brand .mark { font-size: 20px; }
+  .brand .name { font-weight: 800; font-size: 17px; letter-spacing: -0.02em; }
+  .tabs {
+    display: flex; background: rgba(14,92,122,0.08);
+    border-radius: 999px; padding: 3px;
+  }
+  .tab-btn {
+    padding: 7px 14px; border-radius: 999px;
+    font-size: 13.5px; color: #41697C;
+  }
+  .tab-btn.active {
+    background: #fff; color: #0E5C7A; font-weight: 700;
+    box-shadow: 0 1px 4px rgba(14,92,122,0.18);
+  }
+
+  main { padding: 12px 20px 40px; }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── 오늘 탭 ── */
+  .glass-wrap { display: flex; flex-direction: column; align-items: center; padding-top: 8px; }
+  .count-block { text-align: center; margin-top: 10px; }
+  .count-big {
+    font-size: 44px; font-weight: 800; letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+  }
+  .count-unit { font-size: 20px; font-weight: 600; color: #5A7D8C; }
+  .count-ml { margin-top: 4px; font-size: 15px; color: #41697C; }
+
+  .btn-row { display: flex; gap: 10px; margin-top: 22px; }
+  .add-btn {
+    flex: 1; border-radius: 18px; padding: 18px 12px;
+    font-size: 18px; font-weight: 800; color: #fff;
+    background: linear-gradient(180deg, #1FA3CC, #0E7FA8);
+    box-shadow: 0 6px 16px rgba(14,127,168,0.35);
+  }
+  .add-btn:active { transform: scale(0.97); }
+  .minus-btn {
+    width: 62px; border: 2px solid rgba(14,92,122,0.25);
+    border-radius: 18px; background: #fff;
+    font-size: 26px; font-weight: 700; color: #0E5C7A;
+  }
+  .minus-btn:active { transform: scale(0.95); }
+  .minus-btn:disabled { opacity: 0.35; }
+
+  .streak-chip {
+    margin: 18px auto 0; text-align: center; width: fit-content;
+    font-size: 14px; font-weight: 700; color: #B25B00;
+    background: #FFF1DE; border-radius: 999px; padding: 8px 16px;
+  }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 30px; transform: translateX(-50%);
+    background: #0E5C7A; color: #fff; padding: 12px 22px;
+    border-radius: 999px; font-size: 15px; font-weight: 700;
+    box-shadow: 0 8px 24px rgba(14,92,122,0.4); z-index: 10;
+    opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+  }
+  .toast.show { opacity: 1; }
+
+  /* ── 물결 애니메이션 ── */
+  .wave { animation: waveMove 3.2s linear infinite; }
+  @keyframes waveMove {
+    from { transform: translateX(0); }
+    to { transform: translateX(120px); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .wave { animation: none; }
+  }
+
+  /* ── 기록 탭 ── */
+  .card {
+    background: #fff; border-radius: 20px; padding: 18px 18px 14px;
+    box-shadow: 0 2px 10px rgba(14,92,122,0.08); margin-bottom: 14px;
+  }
+  .card h2 { font-size: 15.5px; font-weight: 800; color: #0E5C7A; margin-bottom: 14px; }
+  .chart { display: flex; gap: 8px; align-items: flex-end; height: 150px; }
+  .chart-col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; }
+  .chart-cups {
+    font-size: 12px; font-weight: 700; color: #41697C; height: 16px;
+    font-variant-numeric: tabular-nums;
+  }
+  .chart-track {
+    flex: 1; width: 100%; max-width: 30px;
+    background: rgba(14,92,122,0.07); border-radius: 8px;
+    display: flex; align-items: flex-end; overflow: hidden;
+  }
+  .chart-bar {
+    width: 100%; border-radius: 8px 8px 0 0;
+    transition: height 0.5s ease;
+    background: linear-gradient(180deg, #8FD4E8, #5FB8D4);
+  }
+  .chart-bar.met { background: linear-gradient(180deg, #2FB5D8, #0E7FA8); }
+  .chart-label { margin-top: 6px; font-size: 12.5px; color: #7A96A3; }
+  .chart-label.today { font-weight: 700; color: #0E5C7A; }
+  .chart-goal { margin-top: 10px; font-size: 12px; color: #7A96A3; text-align: right; }
+
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat-card {
+    background: #fff; border-radius: 16px; padding: 16px 14px;
+    box-shadow: 0 2px 10px rgba(14,92,122,0.08); text-align: center;
+  }
+  .stat-value {
+    font-size: 24px; font-weight: 800; letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-label { margin-top: 4px; font-size: 13px; color: #5A7D8C; }
+
+  /* ── 설정 탭 ── */
+  .stepper-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 0; border-bottom: 1px solid rgba(14,92,122,0.08);
+  }
+  .stepper-label { font-size: 15px; font-weight: 600; }
+  .stepper-ctrl { display: flex; align-items: center; gap: 12px; }
+  .step-btn {
+    width: 38px; height: 38px; border-radius: 12px;
+    border: 2px solid rgba(14,92,122,0.2); background: #fff;
+    font-size: 20px; font-weight: 700; color: #0E5C7A;
+  }
+  .step-value {
+    min-width: 70px; text-align: center; font-size: 18px; font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+  .step-unit { font-size: 13px; font-weight: 600; color: #5A7D8C; margin-left: 2px; }
+  .settings-summary {
+    margin-top: 14px; font-size: 14px; font-weight: 700;
+    color: #0E7FA8; text-align: center;
+  }
+  .note { font-size: 13px; color: #7A96A3; line-height: 1.6; padding: 0 4px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="brand">
+      <span class="mark">💧</span>
+      <span class="name">오늘의 물</span>
+    </div>
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="today">오늘</button>
+      <button class="tab-btn" data-tab="history">기록</button>
+      <button class="tab-btn" data-tab="settings">설정</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- 오늘 -->
+    <section class="page active" id="page-today">
+      <div class="glass-wrap">
+        <svg id="glass" width="180" height="270" viewBox="0 0 180 270" role="img">
+          <defs>
+            <clipPath id="glassClip">
+              <path d="M 30 20 L 150 20 L 138 250 Q 137 258 128 258 L 52 258 Q 43 258 42 250 Z"/>
+            </clipPath>
+            <linearGradient id="waterGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#4FC7E8"/>
+              <stop offset="100%" stop-color="#0E7FA8"/>
+            </linearGradient>
+          </defs>
+          <g clip-path="url(#glassClip)">
+            <rect id="waterRect" x="20" y="258" width="140" height="0"
+                  fill="url(#waterGrad)" style="transition: y 0.6s ease, height 0.6s ease;"/>
+            <g id="waveGroup" style="transition: transform 0.6s ease;" transform="translate(0 258)">
+              <path class="wave" id="wavePath"
+                d="M -180 8 Q -150 0 -120 8 T -60 8 T 0 8 T 60 8 T 120 8 T 180 8 T 240 8 T 300 8 T 360 8 V 30 H -180 Z"
+                fill="url(#waterGrad)" visibility="hidden"/>
+            </g>
+          </g>
+          <path d="M 30 20 L 150 20 L 138 250 Q 137 258 128 258 L 52 258 Q 43 258 42 250 Z"
+                fill="none" stroke="#0E5C7A" stroke-width="4" stroke-linejoin="round"/>
+          <line x1="44" y1="40" x2="50" y2="230" stroke="rgba(255,255,255,0.55)"
+                stroke-width="5" stroke-linecap="round"/>
+        </svg>
+
+        <div class="count-block">
+          <div class="count-big">
+            <span id="countNum">0</span><span class="count-unit"> / <span id="goalNum">12</span>잔</span>
+          </div>
+          <div class="count-ml" id="countMl"></div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="minus-btn" id="minusBtn" aria-label="한 잔 빼기">−</button>
+        <button class="add-btn" id="addBtn">💧 한 잔 마셨어요</button>
+      </div>
+
+      <div class="streak-chip" id="streakChip" style="display:none;"></div>
+    </section>
+
+    <!-- 기록 -->
+    <section class="page" id="page-history">
+      <div class="card">
+        <h2>최근 7일</h2>
+        <div class="chart" id="chart"></div>
+        <div class="chart-goal" id="chartGoal"></div>
+      </div>
+      <div class="stat-grid" id="statGrid"></div>
+    </section>
+
+    <!-- 설정 -->
+    <section class="page" id="page-settings">
+      <div class="card">
+        <h2>하루 목표</h2>
+        <div class="stepper-row">
+          <span class="stepper-label">목표 잔 수</span>
+          <div class="stepper-ctrl">
+            <button class="step-btn" data-set="goalCups" data-delta="-1" aria-label="목표 잔 수 줄이기">−</button>
+            <span class="step-value"><span id="goalCupsVal">12</span><span class="step-unit">잔</span></span>
+            <button class="step-btn" data-set="goalCups" data-delta="1" aria-label="목표 잔 수 늘리기">+</button>
+          </div>
+        </div>
+        <div class="stepper-row" style="border-bottom:none;">
+          <span class="stepper-label">한 잔 용량</span>
+          <div class="stepper-ctrl">
+            <button class="step-btn" data-set="mlPerCup" data-delta="-50" aria-label="한 잔 용량 줄이기">−</button>
+            <span class="step-value"><span id="mlPerCupVal">250</span><span class="step-unit">ml</span></span>
+            <button class="step-btn" data-set="mlPerCup" data-delta="50" aria-label="한 잔 용량 늘리기">+</button>
+          </div>
+        </div>
+        <div class="settings-summary" id="settingsSummary"></div>
+      </div>
+      <p class="note">
+        기록은 이 휴대폰(브라우저)에만 저장됩니다. 가족이 각자 자기 폰에서 열면
+        서로 데이터가 섞이지 않아요. 브라우저 데이터를 삭제하면 기록도 함께 지워지니 주의하세요.
+      </p>
+    </section>
+  </main>
+
+  <div class="toast" id="toast">🎉 오늘 목표 달성! 수고하셨어요</div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// 오늘의 물 — 물 마시기 카운터
+// 저장: localStorage 'water:data'
+// 구조: { settings: { goalCups, mlPerCup }, days: { 'YYYY-MM-DD': 잔수 } }
+// ─────────────────────────────────────────────
+(function () {
+  'use strict';
+
+  var STORAGE_KEY = 'water:data';
+  var WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+  var DEFAULTS = { goalCups: 12, mlPerCup: 250 };
+
+  // ── 데이터 로드/저장 ──
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        return {
+          settings: Object.assign({}, DEFAULTS, parsed.settings || {}),
+          days: parsed.days || {}
+        };
+      }
+    } catch (e) { /* 손상된 데이터 → 초기화 */ }
+    return { settings: Object.assign({}, DEFAULTS), days: {} };
+  }
+
+  function save() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (e) {
+      alert('저장에 실패했습니다. 브라우저 저장 공간을 확인해주세요.');
+    }
+  }
+
+  // ── 날짜 유틸 (로컬 기준) ──
+  function dateKey(d) {
+    d = d || new Date();
+    return d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
+  }
+
+  function daysAgo(n) {
+    var d = new Date();
+    d.setDate(d.getDate() - n);
+    return d;
+  }
+
+  var data = load();
+  var currentDay = dateKey();
+  var toastTimer = null;
+
+  function todayCount() {
+    return data.days[currentDay] || 0;
+  }
+
+  // 자정을 넘기면 자동으로 새 날짜로 전환
+  function checkDayRollover() {
+    var now = dateKey();
+    if (now !== currentDay) {
+      currentDay = now;
+      renderAll();
+    }
+  }
+  setInterval(checkDayRollover, 30000);
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) checkDayRollover();
+  });
+
+  // ── 렌더링: 오늘 탭 ──
+  var INNER_TOP = 30, INNER_BOTTOM = 250;
+
+  function renderToday() {
+    var count = todayCount();
+    var goal = data.settings.goalCups;
+    var ml = data.settings.mlPerCup;
+    var ratio = Math.min(count / goal, 1);
+
+    document.getElementById('countNum').textContent = count;
+    document.getElementById('goalNum').textContent = goal;
+    document.getElementById('countMl').textContent =
+      (count * ml).toLocaleString() + 'ml · ' +
+      (ratio >= 1 ? '목표 달성! 🎉' : (goal - count) + '잔 남음');
+
+    // 물 높이
+    var waterTop = INNER_BOTTOM - (INNER_BOTTOM - INNER_TOP) * ratio;
+    var rect = document.getElementById('waterRect');
+    rect.setAttribute('y', waterTop);
+    rect.setAttribute('height', 270 - waterTop);
+
+    // 물결
+    var waveGroup = document.getElementById('waveGroup');
+    var wavePath = document.getElementById('wavePath');
+    waveGroup.setAttribute('transform', 'translate(0 ' + (waterTop - 8) + ')');
+    wavePath.setAttribute('visibility', (ratio > 0 && ratio < 1) ? 'visible' : 'hidden');
+
+    document.getElementById('glass').setAttribute('aria-label',
+      '물 ' + Math.round(ratio * 100) + '% 찼음');
+
+    document.getElementById('minusBtn').disabled = count === 0;
+
+    // 스트릭
+    var streak = calcStreak();
+    var chip = document.getElementById('streakChip');
+    if (streak > 0) {
+      chip.style.display = '';
+      chip.textContent = '🔥 ' + streak + '일 연속 목표 달성 중';
+    } else {
+      chip.style.display = 'none';
+    }
+  }
+
+  // ── 통계 계산 ──
+  function calcStreak() {
+    var goal = data.settings.goalCups;
+    var streak = 0;
+    // 오늘 미달성이면 어제부터 계산
+    var start = todayCount() >= goal ? 0 : 1;
+    for (var i = start; i < 3660; i++) {
+      var k = dateKey(daysAgo(i));
+      if ((data.days[k] || 0) >= goal) streak++;
+      else break;
+    }
+    return streak;
+  }
+
+  // ── 렌더링: 기록 탭 ──
+  function renderHistory() {
+    var goal = data.settings.goalCups;
+    var chart = document.getElementById('chart');
+    chart.innerHTML = '';
+
+    var weekTotal = 0;
+    for (var i = 6; i >= 0; i--) {
+      var d = daysAgo(i);
+      var key = dateKey(d);
+      var cups = data.days[key] || 0;
+      weekTotal += cups;
+      var isToday = key === currentDay;
+      var h = Math.min(cups / goal, 1) * 100;
+      if (cups > 0 && h < 6) h = 6;
+
+      var col = document.createElement('div');
+      col.className = 'chart-col';
+      col.innerHTML =
+        '<div class="chart-cups">' + (cups > 0 ? cups : '') + '</div>' +
+        '<div class="chart-track"><div class="chart-bar' + (cups >= goal ? ' met' : '') +
+          '" style="height:' + h + '%"></div></div>' +
+        '<div class="chart-label' + (isToday ? ' today' : '') + '">' +
+          (isToday ? '오늘' : WEEKDAYS[d.getDay()]) + '</div>';
+      chart.appendChild(col);
+    }
+
+    document.getElementById('chartGoal').textContent = '목표선: ' + goal + '잔';
+
+    // 통계 카드
+    var recorded = 0, goalDays = 0;
+    for (var k in data.days) {
+      if (data.days[k] > 0) recorded++;
+      if (data.days[k] >= goal) goalDays++;
+    }
+    var stats = [
+      ['주간 평균', (weekTotal / 7).toFixed(1) + '잔'],
+      ['연속 달성', calcStreak() + '일'],
+      ['목표 달성일', goalDays + '일'],
+      ['총 기록일', recorded + '일']
+    ];
+    var grid = document.getElementById('statGrid');
+    grid.innerHTML = stats.map(function (s) {
+      return '<div class="stat-card"><div class="stat-value">' + s[1] +
+        '</div><div class="stat-label">' + s[0] + '</div></div>';
+    }).join('');
+  }
+
+  // ── 렌더링: 설정 탭 ──
+  function renderSettings() {
+    document.getElementById('goalCupsVal').textContent = data.settings.goalCups;
+    document.getElementById('mlPerCupVal').textContent = data.settings.mlPerCup;
+    document.getElementById('settingsSummary').textContent =
+      '하루 목표량: ' + (data.settings.goalCups * data.settings.mlPerCup).toLocaleString() + 'ml';
+  }
+
+  function renderAll() {
+    renderToday();
+    renderHistory();
+    renderSettings();
+  }
+
+  // ── 이벤트: 카운트 ──
+  document.getElementById('addBtn').addEventListener('click', function () {
+    checkDayRollover();
+    var before = todayCount();
+    data.days[currentDay] = before + 1;
+    save();
+    renderAll();
+    if (before + 1 >= data.settings.goalCups && before < data.settings.goalCups) {
+      showToast();
+    }
+  });
+
+  document.getElementById('minusBtn').addEventListener('click', function () {
+    checkDayRollover();
+    var c = todayCount();
+    if (c > 0) {
+      data.days[currentDay] = c - 1;
+      save();
+      renderAll();
+    }
+  });
+
+  function showToast() {
+    var t = document.getElementById('toast');
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2600);
+  }
+
+  // ── 이벤트: 설정 스텝퍼 ──
+  var LIMITS = { goalCups: [1, 30], mlPerCup: [50, 1000] };
+  document.querySelectorAll('.step-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var key = btn.dataset.set;
+      var delta = parseInt(btn.dataset.delta, 10);
+      var next = data.settings[key] + delta;
+      var lim = LIMITS[key];
+      data.settings[key] = Math.max(lim[0], Math.min(lim[1], next));
+      save();
+      renderAll();
+    });
+  });
+
+  // ── 이벤트: 탭 전환 ──
+  document.querySelectorAll('.tab-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.remove('active'); });
+      document.querySelectorAll('.page').forEach(function (p) { p.classList.remove('active'); });
+      btn.classList.add('active');
+      document.getElementById('page-' + btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  // 초기 렌더
+  renderAll();
+})();
+</script>
+</body>
+</html>

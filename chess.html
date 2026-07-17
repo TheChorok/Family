@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>체스 모험 — 레벨 20 대장정</title>
+<title>체스 모험 — 레벨 30 대장정</title>
 <style>
   /* ===== 디자인 토큰 ===== */
   :root{
@@ -56,7 +56,14 @@
     #movePanel{grid-column:2; position:sticky; top:16px;}
     .sq{font-size:clamp(26px, 6.8vh, 68px);}
   }
-  /* 말 슬라이드 애니메이션 */
+  /* 📊 복기: 매 수의 국면 스냅샷 저장 */
+function recPly(mv,u){
+  if(tut)return;
+  try{ moveLog.push({snap:JSON.parse(JSON.stringify(st)),
+    f:mv.f, t:mv.t, p:st.b[mv.t], cap:u&&u.cap||null, promo:mv.promo||null}); }catch(e){}
+}
+function recReset(){ moveLog=[]; endInfo=null; const b=document.getElementById("btnReview"); if(b)b.style.display="none"; }
+/* 말 슬라이드 애니메이션 */
   .pc{will-change:transform;}
   /* ===== ⚔️ 대전 모드: 가로 레이아웃 ===== */
   .pvp-badge{display:none;}
@@ -205,7 +212,18 @@
   .modal p{margin:0 0 18px; font-size:15px; opacity:.75; line-height:1.5;}
 
   /* 축하 이모지 낙하 */
-  .confetti{position:fixed; top:-40px; font-size:26px; z-index:60; pointer-events:none;
+  .clkon{box-shadow:inset 0 0 0 3px var(--gold); background:#FFF9EC;}
+.clklow span{color:var(--danger) !important;}
+#clockBar{display:none; gap:8px;}
+#clockBar .clkbox{flex:1; background:var(--card); border-radius:12px; padding:7px 12px;
+  box-shadow:0 2px 0 rgba(39,54,75,.08);}
+#clockBar .clkbox b{display:block; font-size:11px; opacity:.55;}
+#clockBar .clkbox span{font-weight:800; font-size:20px; letter-spacing:1px;}
+.rvcard{background:#F4F8FB; border-radius:12px; padding:10px 12px; margin:8px 0; text-align:left; font-size:13px; line-height:1.6;}
+.rvcard b{font-size:14px;}
+#rvNav{display:none; gap:6px;}
+#rvNav .btn{flex:1; padding:11px 0;}
+.confetti{position:fixed; top:-40px; font-size:26px; z-index:60; pointer-events:none;
     animation:fall linear forwards;}
   @keyframes fall{to{transform:translateY(110vh) rotate(360deg);}}
 
@@ -317,12 +335,24 @@
 
   <div class="tray" id="trayBottom"></div>
 
+  <div id="clockBar">
+    <div class="clkbox" id="clkB"><b>⬛ 상대 시간</b><span id="clkBt">--:--</span></div>
+    <div class="clkbox" id="clkW"><b>⬜ 내 시간</b><span id="clkWt">--:--</span></div>
+  </div>
   <div class="status" id="status">♟️ 흰색 말이 내 거예요. 말을 골라 보세요!</div>
 
   <div class="btnrow">
     <button class="btn green" id="btnHint">💡 힌트</button>
     <button class="btn orange" id="btnNew">🔄 다시 시작</button>
     <button class="btn" id="btnMenu">🏠 메뉴</button>
+    <button class="btn" id="btnReview" style="display:none;background:#3F7FD6;box-shadow:0 3px 0 #2C5FA6;">📊 복기</button>
+  </div>
+  <div class="btnrow" id="rvNav">
+    <button class="btn" id="rvFirst">⏮</button>
+    <button class="btn" id="rvPrev">◀</button>
+    <button class="btn" id="rvNext">▶</button>
+    <button class="btn" id="rvLast">⏭</button>
+    <button class="btn red" id="rvExit">✖ 종료</button>
   </div>
 </div>
 
@@ -333,17 +363,30 @@
 
 <div class="pvp-badge" id="pvpRight"></div>
 
+<!-- 복기 요약 -->
+<div class="overlay" id="reviewOverlay">
+  <div class="modal">
+    <div class="big">📊</div>
+    <h2>이번 판 복기</h2>
+    <div id="rvChartBox" style="background:#F4F8FB;border-radius:12px;padding:8px;"></div>
+    <div id="rvCards"></div>
+    <button class="btn green" id="rvPlay" style="width:100%;margin-bottom:8px;">🔍 판에서 한 수씩 돌려보기</button>
+    <button class="btn" id="rvClose" style="width:100%;">닫기</button>
+  </div>
+</div>
+
 </div><!-- /layout -->
 
 <!-- 메인 메뉴 화면 -->
 <div class="screen" id="menuScreen" style="z-index:82;">
   <div style="font-size:64px;margin-top:24px;">♟️</div>
   <h1>체스 모험</h1>
-  <div class="sub">레벨 20 대장정에 도전해요!</div>
+  <div class="sub">레벨 30 대장정 — 최종 보스는 레이팅 2,000급 그랜드마스터!</div>
   <div class="plist" style="margin-top:8px;">
     <button class="btn orange" id="menuPlay" style="width:100%;padding:18px 0;font-size:18px;">▶️ 게임 시작 (유저 선택·이어하기)</button>
     <button class="btn green" id="menuTut" style="width:100%;padding:18px 0;font-size:18px;">🎓 체스 배우기 (튜토리얼)</button>
     <button class="btn" id="menuPvp" style="width:100%;padding:18px 0;font-size:18px;background:#7A4FBF;box-shadow:0 3px 0 #5A3A8E;">⚔️ 대전 모드 (가족 대결)</button>
+    <button class="btn" id="menuClock" style="width:100%;padding:14px 0;font-size:15px;background:#8A6543;box-shadow:0 3px 0 #5F4326;"></button>
     <button class="btn" id="menuCloud" style="width:100%;padding:14px 0;font-size:15px;">☁️ 가족 서버 연결</button>
     <button class="btn" id="menuAdd" style="width:100%;">➕ 새 가족 등록</button>
     <button class="btn" id="menuRank" style="width:100%;">🏆 가족 랭킹</button>
@@ -420,6 +463,7 @@
    ========================================================= */
 
 /* ---------- 20명의 상대 캐릭터 ---------- */
+const MAXLV=30;
 const FOES = [
   ["🐣","병아리 초코","이제 막 체스를 배웠대!"],
   ["🐰","토끼 통통","깡충깡충, 실수를 자주 해."],
@@ -440,7 +484,17 @@ const FOES = [
   ["🦖","공룡 렉스","엄청나게 강해졌어!"],
   ["🧙","마법사 모모","세 수, 네 수 앞을 읽어."],
   ["🤖","로봇 알파","계산이 아주 정확해."],
-  ["🐉","전설의 용","마지막 상대! 체스 챔피언에 도전!"]
+  ["🐉","전설의 용","마지막 상대! 체스 챔피언에 도전!"],
+  ["🥋","검은띠 사범","기본기가 아주 탄탄해."],
+  ["🧙","마법사 모리","몇 수 앞을 내다봐!"],
+  ["🤖","알파봇","계산이 정확해지기 시작했어."],
+  ["🦾","강철 기사","실수를 거의 안 해."],
+  ["👺","도깨비 고수","수읽기가 무시무시해."],
+  ["🧛","밤의 백작","함정을 파고 기다려."],
+  ["🐲","흑룡","전략의 화신!"],
+  ["👑","체스 여왕","대회 우승자 수준!"],
+  ["🌌","은하 챔피언","거의 완벽한 계산!"],
+  ["🏆","그랜드마스터","최종 보스! 목표 레이팅 2,000!"]
 ];
 
 /* ---------- 말 표시 ---------- */
@@ -718,27 +772,129 @@ function negamax(s, depth, alpha, beta, ply){
 }
 
 /* 레벨 → AI 강도 매핑 */
-function aiDepth(lv){ return lv<=4?1 : lv<=10?2 : 3; }
+/* (구) aiDepth — lvCfg로 대체됨 */
 function aiRandomChance(lv){
   return lv<=2?0.7 : lv<=4?0.45 : lv<=6?0.28 : lv<=8?0.15 : lv<=10?0.07 : 0;
 }
+/* ===== 🚀 강화 엔진: 반복 심화 + 치환표 + 킬러/히스토리 정렬 + 체크 연장 ===== */
+const _rng=(()=>{let a=0x9E3779B9;return()=>{a|=0;a=(a+0x6D2B79F5)|0;let t=Math.imul(a^(a>>>15),1|a);t=(t+Math.imul(t^(t>>>7),61|t))^t;return ((t^(t>>>14))>>>0);};})();
+const ZP={},ZP2={};
+"PNBRQKpnbrqk".split("").forEach(p=>{ZP[p]=Array.from({length:64},()=>_rng());ZP2[p]=Array.from({length:64},()=>_rng());});
+const ZT=_rng(),ZT2=_rng();
+function zkey(s){let h1=0,h2=0;for(let i=0;i<64;i++){const p=s.b[i];if(p){h1^=ZP[p][i];h2^=ZP2[p][i];}}
+  if(s.turn==="b"){h1^=ZT;h2^=ZT2;} return [h1|0,h2|0];}
+let TT=new Map(),KIL=[],HIS=new Int32Array(4096),NODES=0,ENDT=0,ABORT=false;
+function ordScore(s,m,ttm,ply){
+  if(ttm&&m.f===ttm.f&&m.t===ttm.t)return 1e9;
+  const cap=s.b[m.t];
+  if(cap||m.flag==="e")return 1e6+(cap?VAL[cap.toUpperCase()]:100)*10-VAL[s.b[m.f].toUpperCase()];
+  const K=KIL[ply];
+  if(K&&((K[0]&&K[0].f===m.f&&K[0].t===m.t)||(K[1]&&K[1].f===m.f&&K[1].t===m.t)))return 9e5;
+  return HIS[m.f*64+m.t]|0;
+}
+function search2(s,depth,alpha,beta,ply){
+  if(((++NODES)&1023)===0 && Date.now()>ENDT){ABORT=true;return alpha;}
+  const inChk=inCheck(s,s.turn==="w");
+  if(inChk&&ply<48)depth++;
+  const moves=genLegal(s);
+  if(moves.length===0)return inChk?-100000+ply:0;
+  if(depth<=0)return qsearch(s,alpha,beta,6);
+  const zz=zkey(s), h1=zz[0], h2=zz[1];
+  const e=TT.get(h1);
+  let ttm=null;
+  if(e&&e.h2===h2){
+    if(e.d>=depth){
+      if(e.fl===0)return e.sc;
+      if(e.fl<0&&e.sc<=alpha)return alpha;
+      if(e.fl>0&&e.sc>=beta)return beta;
+    }
+    ttm=e.bm;
+  }
+  moves.sort((a,b)=>ordScore(s,b,ttm,ply)-ordScore(s,a,ttm,ply));
+  let best=-Infinity,bm=null,fl=-1;
+  for(const m of moves){
+    const u=applyMove(s,m);
+    const sc=-search2(s,depth-1,-beta,-alpha,ply+1);
+    undoMove(s,m,u);
+    if(ABORT)return alpha;
+    if(sc>best){best=sc;bm=m;}
+    if(best>alpha){alpha=best;fl=0;}
+    if(alpha>=beta){
+      fl=1;
+      if(!s.b[m.t]&&m.flag!=="e"){const K=KIL[ply]=KIL[ply]||[];K[1]=K[0];K[0]=m;HIS[m.f*64+m.t]+=depth*depth;}
+      break;
+    }
+  }
+  if(TT.size>250000)TT.clear();
+  TT.set(h1,{h2,d:depth,sc:best,fl,bm});
+  return best;
+}
+function chooseTimed(ms){
+  TT.clear();KIL=[];HIS.fill(0);ABORT=false;NODES=0;
+  ENDT=Date.now()+ms;
+  const moves=genLegal(st);
+  if(!moves.length)return null;
+  let best=moves[0];
+  for(let d=1;d<=12;d++){
+    let curBest=null,curSc=-Infinity,done=true;
+    moves.sort((a,b)=>((b.f===best.f&&b.t===best.t)?1:0)-((a.f===best.f&&a.t===best.t)?1:0));
+    for(const m of moves){
+      const u=applyMove(st,m);
+      const sc=-search2(st,d-1,-100000,100000,1);
+      undoMove(st,m,u);
+      if(ABORT){done=false;break;}
+      if(sc>curSc){curSc=sc;curBest=m;}
+    }
+    if(done&&curBest)best=curBest;
+    if(ABORT||Date.now()>ENDT)break;
+  }
+  return best;
+}
+/* ===== 레벨 1~30 난이도 설정 ===== */
+function lvCfg(lv){
+  if(lv<=12){
+    const depth=lv<=4?1:lv<=10?2:3;
+    const rand=[0.5,0.4,0.3,0.22, 0.18,0.14,0.10,0.07, 0.05,0.03,0.02,0][lv-1];
+    const margin=Math.max(0,13-lv)*14;
+    return {fixed:depth,rand,margin};
+  }
+  const ms=[260,360,470,600, 760,940,1140,1360, 1600,1850,2100,2350, 2600,2850,3100,3350,3600,3900][lv-13];
+  return {ms,rand:0,margin:lv<=16?(17-lv)*8:0};
+}
 function chooseAiMove(lv){
+  const cfg=lvCfg(lv);
   const moves=genLegal(st);
   if(moves.length===0) return null;
-  if(Math.random()<aiRandomChance(lv))
+  if(cfg.rand && Math.random()<cfg.rand)
     return moves[Math.floor(Math.random()*moves.length)];
-  const depth=aiDepth(lv);
-  const scored=[];
-  for(const m of moves){
-    const u=applyMove(st,m);
-    const sc=-negamax(st,depth-1,-100000,100000,1);
-    undoMove(st,m,u);
-    scored.push({m,sc});
+  if(cfg.fixed){ // 레벨 1~12: 고정 깊이 + 관대한 수 선택
+    const scored=[];
+    for(const m of moves){
+      const u=applyMove(st,m);
+      const sc=-negamax(st,cfg.fixed-1,-100000,100000,1);
+      undoMove(st,m,u);
+      scored.push({m,sc});
+    }
+    scored.sort((a,b)=>b.sc-a.sc);
+    const pool=scored.filter(x=>x.sc>=scored[0].sc-cfg.margin);
+    return pool[Math.floor(Math.random()*pool.length)].m;
   }
-  scored.sort((a,b)=>b.sc-a.sc);
-  const margin=(21-lv)*12; // 레벨이 낮을수록 '괜찮은 수' 범위가 넓음
-  const pool=scored.filter(x=>x.sc>=scored[0].sc-margin);
-  return pool[Math.floor(Math.random()*pool.length)].m;
+  // 레벨 13+: 시간제 반복 심화 탐색
+  const best=chooseTimed(cfg.ms);
+  if(cfg.margin){ // 13~16: 최선 근처의 수 중 하나를 선택 (약간의 인간미)
+    const scored=[];
+    for(const m of moves){
+      const u=applyMove(st,m);
+      const sc=-negamax(st,1,-100000,100000,1);
+      undoMove(st,m,u);
+      scored.push({m,sc});
+    }
+    scored.sort((a,b)=>b.sc-a.sc);
+    const pool=scored.filter(x=>x.sc>=scored[0].sc-cfg.margin).map(x=>x.m);
+    if(best&&!pool.some(m=>m.f===best.f&&m.t===best.t))pool.push(best);
+    return pool[Math.floor(Math.random()*pool.length)];
+  }
+  return best||moves[0];
 }
 
 /* ---------- 소리 (Web Audio) ---------- */
@@ -774,6 +930,7 @@ let profiles=[], current=null;   // current = 지금 플레이 중인 프로필
 let level=1;
 let selected=-1, legalForSel=[], lastMove=null, busy=false, gameOver=false;
 let capturedByPlayer=[], capturedByAi=[], hintMove=null;
+let moveLog=[], endInfo=null; // 📊 복기용 기록
 let pvp=null; // ⚔️ 대전 모드: {w:프로필, b:프로필}
 
 function loadProfiles(){
@@ -827,6 +984,81 @@ async function cloudSync(){
   cloudSave();
   return true;
 }
+/* ===== 체스 시계 (대회식 시간 제한, +2초/수 보너스) ===== */
+const CLK_PRESETS=[0,900,600,300,180]; // 초 (0=무제한)
+let clockPreset=0;
+try{ clockPreset=+(localStorage.getItem("chessClock")||0); }catch(e){}
+if(CLK_PRESETS.indexOf(clockPreset)<0) clockPreset=0;
+let clk={on:false,w:0,b:0,last:0,timer:null};
+const clkFmt=ms=>{const s=Math.max(0,Math.ceil(ms/1000));return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0");};
+function clockLabel(){ return clockPreset? (clockPreset/60)+"분 + 2초/수" : "무제한"; }
+function refreshClockBtn(){ const b=document.getElementById("menuClock"); if(b)b.textContent="⏱️ 시간 제한: "+clockLabel()+" — 눌러서 변경"; }
+function renderClock(){
+  if(!clk.on)return;
+  document.getElementById("clkWt").textContent=clkFmt(clk.w);
+  document.getElementById("clkBt").textContent=clkFmt(clk.b);
+  document.getElementById("clkW").classList.toggle("clkon",st.turn==="w"&&!gameOver);
+  document.getElementById("clkB").classList.toggle("clkon",st.turn==="b"&&!gameOver);
+  document.getElementById("clkW").classList.toggle("clklow",clk.w<60000);
+  document.getElementById("clkB").classList.toggle("clklow",clk.b<60000);
+}
+function clockStop(){ if(clk.timer){clearInterval(clk.timer); clk.timer=null;} clk.on=false; }
+function clockHide(){ clockStop(); const cb=document.getElementById("clockBar"); if(cb)cb.style.display="none"; }
+function clockStart(saved){
+  clockStop();
+  const preset = saved&&saved.preset ? saved.preset : clockPreset;
+  if(!preset||tut){ clockHide(); return; }
+  clk={on:true,
+    w: saved&&saved.cw!=null ? saved.cw : preset*1000,
+    b: saved&&saved.cb!=null ? saved.cb : preset*1000,
+    last:Date.now(), timer:setInterval(clockTick,200)};
+  document.getElementById("clockBar").style.display="flex";
+  renderClock();
+}
+function clockTick(){
+  if(!clk.on||gameOver||busy)return;
+  const now=Date.now(), dt=now-clk.last; clk.last=now;
+  if(st.turn==="w") clk.w-=dt; else clk.b-=dt;
+  if(clk.w<=0){ clk.w=0; renderClock(); onFlag("w"); return; }
+  if(clk.b<=0){ clk.b=0; renderClock(); onFlag("b"); return; }
+  renderClock();
+}
+function chargeClock(side,ms){ // AI 사고 등 멈춘 시간을 수동 정산
+  if(!clk.on)return true;
+  if(side==="w") clk.w-=ms; else clk.b-=ms;
+  clk.last=Date.now();
+  if((side==="w"?clk.w:clk.b)<=0){ if(side==="w")clk.w=0; else clk.b=0; renderClock(); onFlag(side); return false; }
+  return true;
+}
+function clockInc(side){ if(!clk.on)return; if(side==="w")clk.w+=2000; else clk.b+=2000; clk.last=Date.now(); renderClock(); }
+function onFlag(side){
+  if(gameOver)return;
+  clockStop(); gameOver=true; showReviewBtn();
+  if(pvp){
+    const winC = side==="w"?"b":"w", W=pvp[winC], L=pvp[side];
+    sndWin(); confettiBurst();
+    W.pvpW=(W.pvpW||0)+1; L.pvpL=(L.pvpL||0)+1; saveProfiles();
+    endInfo={res:"time",winSide:winC};
+    modal("⏰","시간 초과!",L.avatar+" "+L.name+"의 시간이 다 됐어요! "+W.avatar+" "+W.name+" 승리!","🏠 메뉴로",showMenu);
+    return;
+  }
+  if(side==="w"){
+    sndLose();
+    if(current){ current.losses=(current.losses||0)+1; current.saved=null; saveProfiles(); }
+    endInfo={res:"time",winSide:"b"};
+    modal("⏰","시간 초과!","내 시간이 다 떨어졌어요… 시계를 보면서 두는 연습을 해봐요!","다시 도전!",startGame);
+  }else{
+    sndWin(); confettiBurst();
+    if(current){
+      current.wins=(current.wins||0)+1; current.saved=null;
+      if(level<MAXLV) current.rankCaps=(current.rankCaps||0)+capturedByPlayer.length;
+    }
+    endInfo={res:"time",winSide:"w"};
+    if(level>=MAXLV){ modal("🏆","시간승!","상대의 시간이 다 됐어요! 승리!","계속 연습하기",()=>{ saveProfiles(); startGame(); }); }
+    else modal("🎉","시간승! 레벨 업!","상대 시간이 다 됐어요! 다음 상대에게 도전!","다음 레벨로! →",()=>{ level+=1; saveLevel(); startGame(); });
+    saveProfiles();
+  }
+}
 function saveLevel(){ if(current){ current.level=level; saveProfiles(); } }
 
 /* 두던 판 저장(이어하기용) — 게임이 끝나면 저장본 삭제 */
@@ -836,7 +1068,8 @@ function snapshotGame(){
   else current.saved={
     b:st.b, turn:st.turn, cr:st.cr, ep:st.ep, kW:st.kW, kB:st.kB,
     last:lastMove?{f:lastMove.f,t:lastMove.t}:null,
-    cp:capturedByPlayer, ca:capturedByAi, level:level
+    cp:capturedByPlayer, ca:capturedByAi, level:level,
+    cw:clk.on?clk.w:null, cb:clk.on?clk.b:null, preset:clk.on?clockPreset:null
   };
   saveProfiles();
 }
@@ -1093,8 +1326,13 @@ function tutFindGoalMove(){
 }
 
 function playerMove(mv){
+  if(clk.on){
+    if(!chargeClock("w", Date.now()-clk.last)) return; // 시간 초과면 즉시 패배
+  }
   const wasCap = !!(mv.cap || mv.flag==="e");
   const u=applyMove(st,mv);
+  recPly(mv,u);
+  clockInc("w");
   if(u.cap){
     capturedByPlayer.push(u.cap);
     if(current && !tut) current.captures=(current.captures||0)+1; // 랭킹용 누적(튜토리얼 제외)
@@ -1134,9 +1372,13 @@ function playerMove(mv){
 function aiTurn(){
   busy=true;
   setTimeout(()=>{
+    const t0=Date.now();
     const mv=chooseAiMove(level);
     if(!mv){ busy=false; checkEnd(); return; }
+    if(!chargeClock("b", Date.now()-t0)){ busy=false; return; }
     const u=applyMove(st,mv);
+    recPly(mv,u);
+    clockInc("b");
     if(u.cap) capturedByAi.push(u.cap);
     lastMove=mv;
     (u.cap)?sndCapture():sndMove();
@@ -1200,13 +1442,14 @@ function modal(emoji,title,text,btnLabel,onClick){
   overlay.classList.add("show");
 }
 function showWin(){
+  endInfo={res:'mate',winSide:'w'}; showReviewBtn();
   gameOver=true; sndWin(); confettiBurst();
   if(current){
     current.wins=(current.wins||0)+1; current.saved=null;
-    if(level<20) current.rankCaps=(current.rankCaps||0)+capturedByPlayer.length; // 레벨업 판만 랭킹 인정
+    if(level<MAXLV) current.rankCaps=(current.rankCaps||0)+capturedByPlayer.length; // 레벨업 판만 랭킹 인정
   }
-  if(level>=20){
-    modal("🏆","체스 챔피언!","전설의 용까지 모두 이겼어요! 20레벨 완전 정복! 랭킹 1위에 도전해요!","레벨 20 계속 연습하기",()=>{
+  if(level>=MAXLV){
+    modal("🏆","체스 챔피언!","그랜드마스터까지 모두 이겼어요! 30레벨 완전 정복! 진짜 대회에 나가도 될 실력이에요!","레벨 30 계속 연습하기",()=>{
       saveProfiles(); startGame();
     });
   }else{
@@ -1218,11 +1461,13 @@ function showWin(){
   saveProfiles();
 }
 function showLose(){
+  endInfo={res:'mate',winSide:'b'}; showReviewBtn();
   gameOver=true; sndLose();
   if(current){ current.losses=(current.losses||0)+1; current.saved=null; saveProfiles(); }
   modal("💪","아쉽다! 다시 도전!","져도 괜찮아요. 한 판씩 둘 때마다 실력이 늘어요!","다시 도전하기",startGame);
 }
 function showDraw(reason){
+  endInfo={res:'draw',reason:reason}; showReviewBtn();
   gameOver=true;
   if(current){ current.saved=null; saveProfiles(); }
   modal("🤝","무승부!",reason+". 무승부예요. 한 번 더 해서 이겨 봐요!","다시 도전하기",startGame);
@@ -1274,8 +1519,10 @@ document.getElementById("btnNew").addEventListener("click", ()=>{
 });
 
 /* ---------- 게임 시작 (이어하기 지원) ---------- */
+function showReviewBtn(){ clockStop(); if(!tut && moveLog.length>3){ const b=document.getElementById("btnReview"); if(b)b.style.display="block"; } }
 function startGame(){
-  level = current ? Math.min(20, Math.max(1, current.level||1)) : 1;
+  recReset();
+  level = current ? Math.min(MAXLV, Math.max(1, current.level||1)) : 1;
   const sv = (current && current.saved && current.saved.level===level) ? current.saved : null;
   if(sv){
     st = {b:sv.b.slice(), turn:sv.turn, cr:{...sv.cr}, ep:sv.ep, kW:sv.kW, kB:sv.kB};
@@ -1289,6 +1536,7 @@ function startGame(){
   selected=-1; legalForSel=[]; busy=false; gameOver=false; hintMove=null;
   resetPieceInfo();
   setFoe();
+  clockStart(sv&&sv.cw!=null?sv:null);
   render();
   if(sv){
     setStatus("💾 "+current.name+" — 하던 판을 이어서 계속해요!", "good");
@@ -1314,7 +1562,7 @@ function renderProfiles(){
     card.innerHTML =
       '<div class="av">'+p.avatar+'</div>'+
       '<div><div class="nm">'+esc(p.name)+'</div>'+
-      '<div class="dt">Lv.'+p.level+' · 잡은 말 '+(p.captures||0)+'개 · '+
+      '<div class="dt">Lv.'+p.level+' · ⚔️ 레벨업 잡은 말 '+(p.rankCaps||0)+'개 · '+
       (p.wins||0)+'승 '+(p.losses||0)+'패'+(p.saved?" · 💾 이어하기":"")+'</div></div>';
     const del=document.createElement("button");
     del.className="del"; del.textContent="✕";
@@ -1382,7 +1630,172 @@ function showMenu(){
   pScreen.classList.remove("show");
   menuScreen.classList.add("show");
   pvp=null; document.body.classList.remove("pvp");
+  clockHide();
 }
+/* ========== 📊 복기 시스템 ========== */
+const sqName=i=>"abcdefgh"[i%8]+(8-(i>>3));
+function evalWhite(snap){ // 백 관점 평가 (깊이 2)
+  const s=JSON.parse(JSON.stringify(snap));
+  const moves=genLegal(s);
+  if(moves.length===0){
+    if(inCheck(s, s.turn==="w")) return s.turn==="w" ? -100000 : 100000;
+    return 0;
+  }
+  const sc=negamax(s,2,-1000000,1000000,0);
+  return s.turn==="w" ? sc : -sc;
+}
+const toProb=cp=>{
+  if(cp>=99000)return 100; if(cp<=-99000)return 0;
+  return Math.max(2,Math.min(98,Math.round(100/(1+Math.exp(-cp/260)))));
+};
+function bestAltFor(snap){ // 해당 국면에서 최선 수 (깊이 2)
+  const s=JSON.parse(JSON.stringify(snap));
+  let best=null,bestSc=-Infinity;
+  for(const m of genLegal(s)){
+    const u=applyMove(s,m);
+    const sc=-negamax(s,2,-1000000,1000000,0);
+    undoMove(s,m,u);
+    if(sc>bestSc){ bestSc=sc; best=m; }
+  }
+  return best;
+}
+let rvProbs=null, rvIdx=0, rvRealSt=null, rvRealLast=null;
+function openReview(){
+  if(!moveLog.length)return;
+  modal("📊","복기 분석 중…","엔진이 모든 수를 다시 검토하고 있어요. 잠깐만요!","분석 중…",()=>{});
+  document.getElementById("mBtn").style.display="none";
+  setTimeout(()=>{
+    // 승률 곡선: 초기국면 + 각 수 이후
+    rvProbs=[50];
+    for(const e of moveLog) rvProbs.push(toProb(evalWhite(e.snap)));
+    document.getElementById("mOverlay").classList.remove("show");
+    document.getElementById("mBtn").style.display="block";
+    buildReviewSummary();
+    document.getElementById("reviewOverlay").classList.add("show");
+  },60);
+}
+function meIsWhiteName(){ return pvp? (pvp.w.avatar+" "+pvp.w.name) : "나"; }
+function blackName(){ return pvp? (pvp.b.avatar+" "+pvp.b.name) : (FOES[level-1]?FOES[level-1][0]+" 상대":"상대"); }
+function buildReviewSummary(){
+  // 차트 (백=내 승률 곡선)
+  const N=rvProbs.length, W=300, H=110;
+  let pts="";
+  for(let i=0;i<N;i++) pts+=(N===1?0:(i*(W-16)/(N-1)+8))+","+(H-12-(rvProbs[i]*(H-24)/100))+" ";
+  document.getElementById("rvChartBox").innerHTML=
+    '<div style="font-size:12px;font-weight:800;opacity:.65;text-align:left;">📈 '+esc(meIsWhiteName())+'(⬜)의 예상 승률</div>'
+    +'<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;display:block;">'
+    +'<line x1="8" y1="'+(H-12-(H-24)/2)+'" x2="'+(W-8)+'" y2="'+(H-12-(H-24)/2)+'" stroke="#C8D4E0" stroke-dasharray="4 4" stroke-width="1.5"/>'
+    +'<polyline fill="none" stroke="#3F7FD6" stroke-width="3" stroke-linejoin="round" points="'+pts+'"/>'
+    +'<text x="10" y="16" font-size="11" fill="#3FA46A" font-weight="800">100%</text>'
+    +'<text x="10" y="'+(H-2)+'" font-size="11" fill="#E15B5B" font-weight="800">0%</text></svg>';
+  // 결정적 순간: 각 진영의 최대 승률 하락
+  const cards=document.getElementById("rvCards");
+  let html="";
+  const findWorst=(side)=>{ // side "w": 짝수 인덱스 수(1,3,5…번째 수 → moveLog[0,2,…])
+    let worst=null;
+    for(let k=0;k<moveLog.length;k++){
+      const isW=(k%2===0);
+      if((side==="w")!==isW)continue;
+      const before=rvProbs[k], after=rvProbs[k+1];
+      const drop = side==="w" ? before-after : after-before;
+      if(drop>=15 && (!worst||drop>worst.drop)) worst={k,drop,before,after};
+    }
+    return worst;
+  };
+  const mkCard=(who,side,wst)=>{
+    if(!wst)return "";
+    const e=moveLog[wst.k];
+    let s='<div class="rvcard">🔑 <b>'+esc(who)+'의 결정적 순간 — '+(wst.k+1)+'번째 수</b><br>'
+      +GLYPH[e.p]+' '+sqName(e.f)+'→'+sqName(e.t)+' 이후 승률 '
+      +(side==="w"?wst.before+"% → "+wst.after+"%":(100-wst.before)+"% → "+(100-wst.after)+"%")
+      +' (<span style="color:var(--danger);font-weight:800;">-'+wst.drop+'%p</span>)';
+    const base = wst.k===0 ? newState() : moveLog[wst.k-1].snap;
+    const alt2 = bestAltFor(base);
+    if(alt2 && !(alt2.f===e.f&&alt2.t===e.t))
+      s+='<br>💡 이때는 <b>'+GLYPH[base.b[alt2.f]]+' '+sqName(alt2.f)+'→'+sqName(alt2.t)+'</b>가 더 좋았어요!';
+    s+=' <button class="btn sm" style="margin-top:6px;background:#3F7FD6;box-shadow:0 2px 0 #2C5FA6;" onclick="rvJump('+(wst.k+1)+')">이 장면 보기</button></div>';
+    return s;
+  };
+  const findBest=(side)=>{
+    let best=null;
+    for(let k=0;k<moveLog.length;k++){
+      const isW=(k%2===0);
+      if((side==="w")!==isW)continue;
+      const gain = side==="w" ? rvProbs[k+1]-rvProbs[k] : rvProbs[k]-rvProbs[k+1];
+      if(gain>=12 && (!best||gain>best.gain)) best={k,gain};
+    }
+    return best;
+  };
+  const mkStar=(who,side,bst)=>{
+    if(!bst)return "";
+    const e=moveLog[bst.k];
+    const b4 = side==="w"?rvProbs[bst.k]:100-rvProbs[bst.k];
+    const af = side==="w"?rvProbs[bst.k+1]:100-rvProbs[bst.k+1];
+    return '<div class="rvcard" style="background:#E9F7EE;">🌟 <b>'+esc(who)+'의 최고의 수 — '+(bst.k+1)+'번째 수</b><br>'
+      +GLYPH[e.p]+' '+sqName(e.f)+'→'+sqName(e.t)+(e.cap?" ("+GLYPH[e.cap]+" 잡음!)":"")
+      +' 이후 승률 '+b4+'% → '+af+'% (<span style="color:var(--success);font-weight:800;">+'+bst.gain+'%p</span>)'
+      +' <button class="btn sm green" style="margin-top:6px;" onclick="rvJump('+(bst.k+1)+')">이 장면 보기</button></div>';
+  };
+  html+=mkStar(meIsWhiteName(),"w",findBest("w"));
+  html+=mkStar(blackName(),"b",findBest("b"));
+  html+=mkCard(meIsWhiteName(),"w",findWorst("w"));
+  html+=mkCard(blackName(),"b",findWorst("b"));
+  if(!html) html='<div class="rvcard">👏 양쪽 모두 큰 실수 없는 안정적인 대국이었어요!</div>';
+  // 마무리 해설
+  const last=moveLog[moveLog.length-1];
+  let endTxt="";
+  if(endInfo&&endInfo.res==="mate"){
+    const wn = endInfo.winSide==="w" ? meIsWhiteName() : blackName();
+    endTxt="🏁 <b>마무리</b>: "+esc(wn)+"이(가) "+GLYPH[last.p]+"를 "+sqName(last.t)+"로 옮기며 <b>체크메이트!</b>"
+      +(last.cap?" ("+GLYPH[last.cap]+"를 잡으면서!)":"")+" 상대 킹은 피할 곳도, 막을 방법도 없었어요.";
+  }else if(endInfo&&endInfo.res==="time"){
+    const wn = endInfo.winSide==="w" ? meIsWhiteName() : blackName();
+    const ln = endInfo.winSide==="w" ? blackName() : meIsWhiteName();
+    endTxt="🏁 <b>마무리</b>: ⏰ "+esc(ln)+"의 시간이 다 떨어져 <b>"+esc(wn)+"의 시간승!</b>";
+  }else if(endInfo){
+    endTxt="🏁 <b>마무리</b>: "+esc(endInfo.reason||"무승부")+"로 비겼어요.";
+  }
+  if(endTxt) html+='<div class="rvcard">'+endTxt+'</div>';
+  cards.innerHTML=html;
+}
+function rvRender(){
+  const nav=document.getElementById("rvNav");
+  if(rvIdx===0){ st=JSON.parse(JSON.stringify(newState())); lastMove=null; }
+  else{ const e=moveLog[rvIdx-1]; st=JSON.parse(JSON.stringify(e.snap)); lastMove={f:e.f,t:e.t}; }
+  selected=-1; legalForSel=[]; hintMove=null;
+  render();
+  if(rvIdx===0) setStatus("📊 복기: 시작 국면 (▶로 진행)");
+  else{
+    const e=moveLog[rvIdx-1], isW=((rvIdx-1)%2===0);
+    setStatus("📊 "+rvIdx+"번째 수: "+(isW?"⬜":"⬛")+" "+GLYPH[e.p]+" "+sqName(e.f)+"→"+sqName(e.t)
+      +(e.cap?" ("+GLYPH[e.cap]+" 잡음!)":"")+" · ⬜ 승률 "+rvProbs[rvIdx]+"%");
+  }
+}
+function rvJump(i){
+  document.getElementById("reviewOverlay").classList.remove("show");
+  enterReplay(); rvIdx=Math.max(0,Math.min(moveLog.length,i)); rvRender();
+}
+function enterReplay(){
+  if(rvRealSt)return;
+  rvRealSt=st; rvRealLast=lastMove;
+  document.getElementById("rvNav").style.display="flex";
+  rvIdx=moveLog.length;
+}
+function exitReplay(){
+  if(!rvRealSt)return;
+  st=rvRealSt; lastMove=rvRealLast; rvRealSt=null; rvRealLast=null;
+  document.getElementById("rvNav").style.display="none";
+  selected=-1; legalForSel=[]; render();
+  setStatus("복기를 마쳤어요. [📊 복기]로 다시 볼 수 있어요!");
+}
+document.getElementById("btnReview").addEventListener("click",openReview);
+document.getElementById("rvClose").addEventListener("click",()=>document.getElementById("reviewOverlay").classList.remove("show"));
+document.getElementById("rvPlay").addEventListener("click",()=>{ document.getElementById("reviewOverlay").classList.remove("show"); enterReplay(); rvRender(); });
+document.getElementById("rvFirst").addEventListener("click",()=>{ rvIdx=0; rvRender(); });
+document.getElementById("rvPrev").addEventListener("click",()=>{ rvIdx=Math.max(0,rvIdx-1); rvRender(); });
+document.getElementById("rvNext").addEventListener("click",()=>{ rvIdx=Math.min(moveLog.length,rvIdx+1); rvRender(); });
+document.getElementById("rvLast").addEventListener("click",()=>{ rvIdx=moveLog.length; rvRender(); });
+document.getElementById("rvExit").addEventListener("click",exitReplay);
 /* ========== ⚔️ 대전 모드 ========== */
 const pvpOverlay=document.getElementById("pvpOverlay");
 let pvpPick=null;
@@ -1452,6 +1865,7 @@ async function cloudTest(){
 }
 document.getElementById("pvpCancel").addEventListener("click",()=>pvpOverlay.classList.remove("show"));
 function startPvp(a,b){
+  recReset();
   const flip=Math.random()<0.5;           // 🎲 선공(흰색) 랜덤 배정
   pvp={ w: flip?a:b, b: flip?b:a };
   current=null; tut=false;
@@ -1462,6 +1876,7 @@ function startPvp(a,b){
   document.body.classList.add("pvp");
   menuScreen.classList.remove("show");
   pScreen.classList.remove("show");
+  clockStart(null);
   render(); updatePvpBadges();
   modal("🎲","선공 뽑기 결과!","⬜ 흰색(선공)·왼쪽: "+pvp.w.avatar+" "+pvp.w.name+" / ⬛ 검은색(후공)·오른쪽: "+pvp.b.avatar+" "+pvp.b.name,"⚔️ 대결 시작!",()=>{ pvpTurnStatus(); });
 }
@@ -1483,6 +1898,7 @@ function updatePvpBadges(){
 }
 function pvpEnd(winColor,drawReason){
   gameOver=true; updatePvpBadges();
+  endInfo={res:winColor?'mate':'draw',winSide:winColor,reason:drawReason}; showReviewBtn();
   if(winColor){
     const W=pvp[winColor], Lo=pvp[winColor==="w"?"b":"w"];
     sndWin(); confettiBurst();
@@ -1504,6 +1920,13 @@ document.getElementById("menuAdd").addEventListener("click",()=>openProfileScree
 document.getElementById("menuRank").addEventListener("click",()=>{
   renderRank(); rankOverlay.classList.add("show");
 });
+document.getElementById("menuClock").addEventListener("click",()=>{
+  const i=CLK_PRESETS.indexOf(clockPreset);
+  clockPreset=CLK_PRESETS[(i+1)%CLK_PRESETS.length];
+  try{ localStorage.setItem("chessClock",String(clockPreset)); }catch(e){}
+  refreshClockBtn();
+});
+refreshClockBtn();
 document.getElementById("menuTut").addEventListener("click",startTutorial);
 document.getElementById("pBack").addEventListener("click",showMenu);
 
