@@ -56,14 +56,7 @@
     #movePanel{grid-column:2; position:sticky; top:16px;}
     .sq{font-size:clamp(26px, 6.8vh, 68px);}
   }
-  /* 📊 복기: 매 수의 국면 스냅샷 저장 */
-function recPly(mv,u){
-  if(tut)return;
-  try{ moveLog.push({snap:JSON.parse(JSON.stringify(st)),
-    f:mv.f, t:mv.t, p:st.b[mv.t], cap:u&&u.cap||null, promo:mv.promo||null}); }catch(e){}
-}
-function recReset(){ moveLog=[]; endInfo=null; const b=document.getElementById("btnReview"); if(b)b.style.display="none"; }
-/* 말 슬라이드 애니메이션 */
+  /* 말 슬라이드 애니메이션 */
   .pc{will-change:transform;}
   /* ===== ⚔️ 대전 모드: 가로 레이아웃 ===== */
   .pvp-badge{display:none;}
@@ -931,6 +924,13 @@ let level=1;
 let selected=-1, legalForSel=[], lastMove=null, busy=false, gameOver=false;
 let capturedByPlayer=[], capturedByAi=[], hintMove=null;
 let moveLog=[], endInfo=null; // 📊 복기용 기록
+/* 📊 복기: 매 수의 국면 스냅샷 저장 */
+function recPly(mv,u){
+  if(tut)return;
+  try{ moveLog.push({snap:JSON.parse(JSON.stringify(st)),
+    f:mv.f, t:mv.t, p:st.b[mv.t], cap:u&&u.cap||null, promo:mv.promo||null}); }catch(e){}
+}
+function recReset(){ moveLog=[]; endInfo=null; const b=document.getElementById("btnReview"); if(b)b.style.display="none"; }
 let pvp=null; // ⚔️ 대전 모드: {w:프로필, b:프로필}
 
 function loadProfiles(){
