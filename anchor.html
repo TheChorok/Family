@@ -101,6 +101,24 @@ section{margin-top:24px}
 .supp-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:11px}
 .supp-head .cnt{font-family:var(--mono);font-size:13px;color:var(--accent);font-weight:700}
 
+/* 입력 */
+.inrow{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:4px}
+.infield label{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;
+  color:var(--ink-dim);text-transform:uppercase;margin-bottom:5px}
+.infield input{width:100%;background:var(--surface-2);border:1px solid var(--line);color:var(--ink);
+  border-radius:9px;padding:12px 13px;font-family:var(--mono);font-size:18px;font-weight:700;
+  text-align:right;appearance:none;-moz-appearance:textfield}
+.infield input::-webkit-outer-spin-button,.infield input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.infield input:focus{outline:none;border-color:var(--accent)}
+.readout{margin-top:13px;display:grid;gap:8px}
+.ro{display:flex;justify-content:space-between;align-items:baseline;padding:11px 13px;
+  border-radius:10px;background:var(--surface-2);border:1px solid var(--line)}
+.ro .k{font-size:13px;color:var(--ink-dim)}
+.ro .v{font-family:var(--mono);font-size:16px;font-weight:700}
+.ro.good .v{color:var(--ok)} .ro.bad .v{color:var(--stop)} .ro.mid .v{color:var(--upper)}
+.wbox{display:flex;gap:9px;align-items:flex-end;margin-top:4px}
+.wbox .infield{flex:1}
+
 /* 카운터 */
 .counters{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
 .ctr{background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:12px 13px}
@@ -282,6 +300,43 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
         빈속에 먹으면 유산균은 위산에 죽고, CLA는 흡수가 안 되면서 속만 쓰리다.<br><br>
         <b>CLA는 하루 2정.</b> 일반식 뒤에만 먹는다. 랩노쉬는 지방이 거의 없어 흡수가 안 되니 건너뛴다.
         저녁이 랩노쉬뿐인 날은 점심 후 1정으로 끝낸다.
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>오늘 마무리</h2><span>INTAKE</span></div>
+    <div class="card">
+      <div class="inrow">
+        <div class="infield">
+          <label>섭취 칼로리</label>
+          <input type="number" id="inKcal" inputmode="numeric" placeholder="0">
+        </div>
+        <div class="infield">
+          <label>단백질 g</label>
+          <input type="number" id="inProt" inputmode="numeric" placeholder="0">
+        </div>
+      </div>
+      <div class="readout">
+        <div class="ro"><span class="k">오늘 소모 (TDEE)</span><span class="v" id="roTdee">—</span></div>
+        <div class="ro" id="roBalBox"><span class="k">수지</span><span class="v" id="roBal">—</span></div>
+        <div class="ro" id="roProtBox"><span class="k">단백질 <span style="color:var(--ink-dim);font-size:11px">/ 150g</span></span><span class="v" id="roProt">—</span></div>
+      </div>
+      <div class="warn" id="deficitWarn" hidden></div>
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
+        <div style="font-size:13px;color:var(--ink-dim);margin-bottom:8px">주간 체성분 (월요일 아침 공복)</div>
+        <div class="inrow">
+          <div class="infield">
+            <label>체중 kg</label>
+            <input type="number" id="inWeight" step="0.1" inputmode="decimal" placeholder="—">
+          </div>
+          <div class="infield">
+            <label>체지방 kg</label>
+            <input type="number" id="inFat" step="0.1" inputmode="decimal" placeholder="—">
+          </div>
+        </div>
+        <button class="pill" type="button" id="saveWeight" style="margin-top:9px;padding:11px 18px;width:100%">저장</button>
+        <div style="font-family:var(--mono);font-size:11.5px;color:var(--ink-dim);margin-top:9px;line-height:1.6" id="weightNote">—</div>
       </div>
     </div>
   </section>
@@ -523,6 +578,16 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
   </section>
 
   <section>
+    <div class="sec-head"><h2>최근 7일 평균</h2><span>INTAKE</span></div>
+    <div class="stats">
+      <div class="stat"><div class="k">섭취</div><div class="v"><span id="aKcal">—</span><small> kcal</small></div></div>
+      <div class="stat"><div class="k">수지</div><div class="v"><span id="aBal">—</span><small> kcal</small></div></div>
+      <div class="stat"><div class="k">단백질</div><div class="v"><span id="aProt">—</span><small> g</small></div></div>
+      <div class="stat"><div class="k">기록일</div><div class="v"><span id="aDays">0</span><small> / 7</small></div></div>
+    </div>
+  </section>
+
+  <section>
     <div class="sec-head"><h2>월별 누적</h2><span>HISTORY</span></div>
     <table>
       <thead><tr><th>월</th><th>운동</th><th>물</th><th>골프</th><th>음주</th></tr></thead>
@@ -652,7 +717,7 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
     if(!o || typeof o !== 'object') o = {};
     if(!o.days) o.days = {};
     if(!o.settings) o.settings = {};
-    if(typeof o.settings.rest !== 'number') o.settings.rest = 0; // 기본 일요일
+    if(!o.weights) o.weights = {};
     return o;
   }
   function save(){
@@ -664,7 +729,7 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
   }
   function pad(n){ return n < 10 ? '0'+n : ''+n; }
   function day(k){
-    if(!db.days[k]) db.days[k] = {circuit:false, dumbbell:false, round:false, range:false, drink:false, water:0, supp:{}, rest:false, part:null};
+    if(!db.days[k]) db.days[k] = {circuit:false, dumbbell:false, round:false, range:false, drink:false, water:0, supp:{}, rest:false, part:null, kcal:null, prot:null};
     return db.days[k];
   }
   function has(k){ return Object.prototype.hasOwnProperty.call(db.days, k); }
@@ -758,6 +823,127 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
     document.getElementById('suppCnt').textContent = n + ' / ' + SUPP_TOTAL;
   }
 
+  /* ── 대사량 계산 ── */
+  var PROT_TARGET = 150;
+
+  // 해당 시점 이전의 가장 최근 체성분 기록 {w, f}
+  function comp(dt){
+    var best = null, bestK = null, kk = key(dt);
+    Object.keys(db.weights || {}).forEach(function(k){
+      if(k <= kk && (bestK === null || k > bestK)){ bestK = k; best = db.weights[k]; }
+    });
+    return best; // null이면 미입력
+  }
+  // Katch-McArdle: 370 + 21.6 × 제지방량
+  function bmr(c){
+    if(!c || typeof c.w !== 'number' || typeof c.f !== 'number') return null;
+    var lbm = c.w - c.f;
+    if(lbm <= 0) return null;
+    return Math.round(370 + 21.6 * lbm);
+  }
+  function activityFactor(d){
+    if(!d) return 1.35;
+    if(d.rest) return 1.35;
+    if(d.dumbbell) return 1.55;                       // 덤벨까지 완료
+    if(d.circuit || d.round || d.range) return 1.45;  // 서킷·골프만
+    return 1.35;                                      // 운동 없음
+  }
+  function tdee(dt){
+    var b = bmr(comp(dt));
+    if(b === null) return null;
+    return Math.round(b * activityFactor(db.days[key(dt)]));
+  }
+
+  function renderIntake(){
+    var now = new Date(), k = key(now), d = day(k);
+    var c = comp(now), b = bmr(c), t = tdee(now);
+    document.getElementById('roTdee').textContent = (t === null) ? '체성분 입력 필요' : t.toLocaleString() + ' kcal';
+
+    var kc = document.getElementById('inKcal'), pr = document.getElementById('inProt');
+    if(document.activeElement !== kc) kc.value = (d.kcal === null || d.kcal === undefined) ? '' : d.kcal;
+    if(document.activeElement !== pr) pr.value = (d.prot === null || d.prot === undefined) ? '' : d.prot;
+
+    var balBox = document.getElementById('roBalBox'), balEl = document.getElementById('roBal');
+    var warn = document.getElementById('deficitWarn');
+    var hasK = !(d.kcal === null || d.kcal === undefined || d.kcal === '');
+    if(!hasK || t === null){
+      balEl.textContent = '—'; balBox.className = 'ro'; warn.hidden = true;
+    } else {
+      var bal = d.kcal - t;
+      balEl.textContent = (bal > 0 ? '+' : '') + bal.toLocaleString() + ' kcal';
+      balBox.className = 'ro ' + (bal > 300 ? 'bad' : (bal < -800 ? 'bad' : (bal <= 0 ? 'good' : 'mid')));
+      if(bal < -800){
+        warn.hidden = false;
+        warn.innerHTML = '<b>적자가 800kcal을 넘었다.</b> 이 페이스가 이어지면 4월처럼 근육부터 빠진다. ' +
+          '단백질과 하체 운동을 먼저 확보하고, 적자는 500~700 선에서 잡는다.';
+      } else if(bal > 300){
+        warn.hidden = false;
+        warn.innerHTML = '<b>흑자다.</b> 하루쯤은 괜찮다. 다만 사흘 연속이면 체중이 올라간다.';
+      } else { warn.hidden = true; }
+    }
+
+    var pBox = document.getElementById('roProtBox'), pEl = document.getElementById('roProt');
+    if(d.prot === null || d.prot === undefined || d.prot === ''){
+      pEl.textContent = '—'; pBox.className = 'ro';
+    } else {
+      pEl.textContent = d.prot + ' g';
+      pBox.className = 'ro ' + (d.prot >= PROT_TARGET ? 'good' : (d.prot >= PROT_TARGET*0.8 ? 'mid' : 'bad'));
+    }
+
+    var wIn = document.getElementById('inWeight'), fIn = document.getElementById('inFat');
+    if(document.activeElement !== wIn) wIn.value = '';
+    if(document.activeElement !== fIn) fIn.value = '';
+    if(c){
+      wIn.placeholder = c.w.toFixed(1); fIn.placeholder = c.f.toFixed(1);
+      var lbm = c.w - c.f, pctF = c.f / c.w * 100;
+      document.getElementById('weightNote').innerHTML =
+        c.w.toFixed(1) + 'kg · 체지방 ' + c.f.toFixed(1) + 'kg (' + pctF.toFixed(1) + '%)<br>' +
+        '제지방 ' + lbm.toFixed(1) + 'kg · BMR ' + b.toLocaleString() + ' kcal (Katch-McArdle)';
+    } else {
+      wIn.placeholder = '—'; fIn.placeholder = '—';
+      document.getElementById('weightNote').textContent =
+        '체중과 체지방량을 함께 입력해야 BMR이 계산된다.';
+    }
+  }
+
+  ['inKcal','inProt'].forEach(function(id){
+    document.getElementById(id).addEventListener('input', function(){
+      var d = day(key(new Date()));
+      var v = this.value === '' ? null : Math.max(0, parseInt(this.value,10) || 0);
+      d[id === 'inKcal' ? 'kcal' : 'prot'] = v;
+      save(); renderIntake();
+    });
+  });
+  document.getElementById('saveWeight').addEventListener('click', function(){
+    var wEl = document.getElementById('inWeight'), fEl = document.getElementById('inFat');
+    var wv = parseFloat(wEl.value), fv = parseFloat(fEl.value);
+    if(isNaN(wv) || wv < 30 || wv > 300) return;
+    if(isNaN(fv) || fv < 1 || fv >= wv) return;      // 체지방은 체중보다 작아야 한다
+    if(!db.weights) db.weights = {};
+    db.weights[key(new Date())] = {w: Math.round(wv*10)/10, f: Math.round(fv*10)/10};
+    wEl.value = ''; fEl.value = ''; wEl.blur(); fEl.blur();
+    save(); renderIntake(); renderRecord();
+  });
+
+  function renderAverages(){
+    var now = new Date(), sumK=0, sumB=0, sumP=0, n=0, np=0, nb=0;
+    var c = new Date(now); c.setHours(0,0,0,0);
+    for(var i=0;i<7;i++){
+      var r = db.days[key(c)];
+      if(r && r.kcal !== null && r.kcal !== undefined && r.kcal !== ''){
+        var tt = tdee(new Date(c));
+        sumK += r.kcal; if(tt !== null){ sumB += (r.kcal - tt); nb++; } n++;
+      }
+      if(r && r.prot !== null && r.prot !== undefined && r.prot !== ''){ sumP += r.prot; np++; }
+      c.setDate(c.getDate()-1);
+    }
+    document.getElementById('aKcal').textContent = n ? Math.round(sumK/n).toLocaleString() : '—';
+    var ab = nb ? Math.round(sumB/nb) : null;
+    document.getElementById('aBal').textContent = ab === null ? '—' : (ab>0?'+':'') + ab.toLocaleString();
+    document.getElementById('aProt').textContent = np ? Math.round(sumP/np) : '—';
+    document.getElementById('aDays').textContent = n;
+  }
+
   function renderToday(){
     var now = new Date(), k = key(now), d = day(k), wd = now.getDay();
     document.getElementById('todayDate').textContent = (now.getMonth()+1) + '월 ' + now.getDate() + '일';
@@ -815,6 +1001,7 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
     document.getElementById('ctrMonth').classList.toggle('warn-lv', mo >= 5);
 
     renderSupp();
+    renderIntake();
 
     var st = streaks();
     document.getElementById('streak').textContent = st.cur;
@@ -924,6 +1111,7 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
     document.getElementById('sSober').textContent = logged ? Math.round(sober/logged*100) : 0;
     document.getElementById('sRound').textContent = rounds;
     document.getElementById('sRange').textContent = ranges;
+    renderAverages();
     renderHistory();
   }
 
