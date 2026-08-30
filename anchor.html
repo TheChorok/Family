@@ -88,6 +88,19 @@ section{margin-top:24px}
 .water-head{display:flex;justify-content:space-between;align-items:baseline}
 .water-head .amt{font-family:var(--mono);font-size:13px;color:var(--water);font-weight:700}
 
+/* 영양제 */
+.supp-grp{margin-bottom:12px}
+.supp-grp:last-child{margin-bottom:0}
+.supp-grp h4{margin:0 0 7px;font-size:12px;font-family:var(--mono);letter-spacing:.06em;
+  color:var(--ink-dim);text-transform:uppercase;font-weight:600}
+.pills{display:flex;flex-wrap:wrap;gap:6px}
+.pill{appearance:none;border:1px solid var(--line);background:transparent;color:var(--ink-dim);
+  border-radius:999px;padding:8px 13px;font-family:inherit;font-size:13px;cursor:pointer;transition:.15s}
+.pill[data-on="1"]{background:var(--accent);border-color:var(--accent);color:#14181B;font-weight:600}
+.pill:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.supp-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:11px}
+.supp-head .cnt{font-family:var(--mono);font-size:13px;color:var(--accent);font-weight:700}
+
 /* 카운터 */
 .counters{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
 .ctr{background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:12px 13px}
@@ -216,6 +229,10 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
         </div>
       </div>
 
+      <div class="warn" id="restBanner" hidden style="margin-top:12px;background:rgba(138,168,200,.1);border-color:rgba(138,168,200,.3);color:#B9CDE0">
+        <b style="color:var(--sun)">오늘은 휴식으로 선언했다.</b> 운동은 건너뛴다. 물과 무음주는 그대로.
+      </div>
+
       <div class="checks">
         <button class="chk" data-key="circuit">
           <span class="box">✓</span>
@@ -227,7 +244,11 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
         </button>
         <button class="chk" data-key="round">
           <span class="box">✓</span>
-          <span class="txt"><b>라운딩</b><small>체크하면 서킷은 자동 충족</small></span>
+          <span class="txt"><b>라운딩</b><small>18홀 · 서킷 자동 충족</small></span>
+        </button>
+        <button class="chk" data-key="range">
+          <span class="box">✓</span>
+          <span class="txt"><b>골프연습</b><small>연습장 1.5시간 · 서킷 자동 충족</small></span>
         </button>
         <button class="chk drink" data-key="drink">
           <span class="box">✓</span>
@@ -249,6 +270,23 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
   </section>
 
   <section>
+    <div class="sec-head"><h2>영양제</h2><span>SUPPLEMENTS</span></div>
+    <div class="card">
+      <div class="supp-head">
+        <div style="font-size:13px;color:var(--ink-dim)">탭하면 체크됩니다</div>
+        <div class="cnt" id="suppCnt">0 / 0</div>
+      </div>
+      <div id="suppBox"></div>
+      <div class="warn" style="margin-top:12px">
+        <b>기상 공복엔 물만.</b> 유산균·밀크시슬·CLA는 전부 첫 식사 시점으로 옮겼다.
+        빈속에 먹으면 유산균은 위산에 죽고, CLA는 흡수가 안 되면서 속만 쓰리다.<br><br>
+        <b>CLA는 하루 2정.</b> 일반식 뒤에만 먹는다. 랩노쉬는 지방이 거의 없어 흡수가 안 되니 건너뛴다.
+        저녁이 랩노쉬뿐인 날은 점심 후 1정으로 끝낸다.
+      </div>
+    </div>
+  </section>
+
+  <section>
     <div class="sec-head"><h2>이번 주 · 이번 달</h2><span>LIMITS</span></div>
     <div class="counters">
       <div class="ctr" id="ctrWeek"><div class="k">이번 주 음주</div><div class="v"><span id="wkDrink">0</span><small> / 2</small></div></div>
@@ -257,6 +295,15 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
       <div class="ctr"><div class="k">최장 연속</div><div class="v"><span id="best">0</span><small> 일</small></div></div>
     </div>
     <div class="warn" id="carryWarn" hidden></div>
+    <div class="card" style="margin-top:12px">
+      <div style="font-size:13px;color:var(--ink-dim);margin-bottom:9px">
+        오늘 조정 · 이번 주 휴식 <b id="restWeek" style="color:var(--ink)">0</b>회
+      </div>
+      <div class="pills">
+        <button class="pill" type="button" id="restToggle" data-on="0">오늘 휴식</button>
+        <button class="pill" type="button" id="partSwap">부위 바꾸기</button>
+      </div>
+    </div>
   </section>
 </div>
 
@@ -460,6 +507,7 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
       <span><i style="background:var(--ok)"></i>전부 달성</span>
       <span><i style="background:var(--upper)"></i>일부 달성</span>
       <span><i style="background:var(--stop)"></i>음주</span>
+      <span><i style="background:var(--sun)"></i>휴식일</span>
       <span><i style="background:var(--line)"></i>기록 없음</span>
     </div>
   </section>
@@ -470,15 +518,15 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
       <div class="stat"><div class="k">운동 (서킷+덤벨)</div><div class="v"><span id="sEx">0</span><small>%</small></div></div>
       <div class="stat"><div class="k">물 3L 달성</div><div class="v"><span id="sWater">0</span><small>%</small></div></div>
       <div class="stat"><div class="k">무음주일</div><div class="v"><span id="sSober">0</span><small>%</small></div></div>
-      <div class="stat"><div class="k">라운딩</div><div class="v"><span id="sRound">0</span><small> 회</small></div></div>
+      <div class="stat"><div class="k">라운딩 · 연습</div><div class="v"><span id="sRound">0</span><small> / </small><span id="sRange">0</span><small> 회</small></div></div>
     </div>
   </section>
 
   <section>
     <div class="sec-head"><h2>월별 누적</h2><span>HISTORY</span></div>
     <table>
-      <thead><tr><th>월</th><th>운동</th><th>물</th><th>음주</th></tr></thead>
-      <tbody id="histBody"><tr><td colspan="4" style="color:var(--ink-dim)">아직 기록이 없습니다.</td></tr></tbody>
+      <thead><tr><th>월</th><th>운동</th><th>물</th><th>골프</th><th>음주</th></tr></thead>
+      <tbody id="histBody"><tr><td colspan="5" style="color:var(--ink-dim)">아직 기록이 없습니다.</td></tr></tbody>
     </table>
     <div class="tools">
       <button id="exportBtn">기록 내보내기 (JSON)</button>
@@ -525,6 +573,8 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
     <tr><td>랩노쉬 맥스</td><td class="num">하루 1~2병 (상한)</td></tr>
     <tr><td>물</td><td class="num">250ml × 12잔</td></tr>
     <tr><td>음주</td><td class="num">주 2회 · 월 5회 상한</td></tr>
+    <tr><td>휴식</td><td class="num">주 1회 목표 · 날짜는 직접 선언</td></tr>
+    <tr><td>골프연습</td><td class="num">주 2회 · 1.5시간</td></tr>
     <tr><td>식후 걷기</td><td class="num">40분</td></tr>
     <tr><td>공복 체중</td><td class="num">월요일 아침 · 동일 조건</td></tr>
   </table>
@@ -538,13 +588,14 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
   <div class="sec-head"><h2>영양제</h2><span>SUPPLEMENTS</span></div>
   <table>
     <tr><th>시점</th><th>내용</th></tr>
-    <tr><td>기상 공복</td><td class="num">밀크시슬 · 유산균</td></tr>
-    <tr><td>첫 식사 후</td><td class="num">아마칼디 · 비타민C · 피크노제놀 · 크레아틴 · CLA</td></tr>
+    <tr><td>기상 공복</td><td class="num">물 500ml</td></tr>
+    <tr><td>첫 식사 직전</td><td class="num">유산균</td></tr>
+    <tr><td>첫 식사 후</td><td class="num">밀크시슬 · 아마칼디 · 비타민C · 피크노제놀 · 크레아틴 · CLA</td></tr>
     <tr><td>두 번째 식사 후</td><td class="num">오메가3 · 비타민B · MSM · 마데카솔 · 크레아틴 · CLA</td></tr>
-    <tr><td>취침 전</td><td class="num">CLA · 잔티젠</td></tr>
+    <tr><td>취침 전</td><td class="num">잔티젠</td></tr>
   </table>
   <div class="warn" style="margin-top:11px">
-    CLA와 잔티젠은 <b>기름 캡슐이다.</b> 랩노쉬만 마시는 끼니에는 흡수가 잘 안 되니 일반식 이후로 옮긴다.
+    CLA는 <b>기름 캡슐이라 일반식 뒤에만 먹는다.</b> 하루 2정, 랩노쉬 끼니는 건너뛴다.
     공복혈당 107 상태이므로 다음 검진에서 <b>공복혈당 · 당화혈색소 · 간수치</b>를 확인한다.
   </div>
 </section>
@@ -563,15 +614,46 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
   var KEY = 'shower_anchor_v1';
   var DOW = ['일','월','화','수','목','금','토'];
   // 요일별 덤벨 배정: 0=일 휴식, 1/3/5=상체, 2/4/6=하체
-  var PLAN = {0:null, 1:'upper', 2:'lower', 3:'upper', 4:'lower', 5:'upper', 6:'lower'};
+  // 요일 고정 없음. 마지막으로 수행한 덤벨 세션의 반대가 다음 차례가 된다.
+  function isRest(dt){ var d = db.days[key(dt)]; return !!(d && d.rest); }
+
+  // 오늘 해야 할 덤벨 부위: 오늘 직접 지정했으면 그것, 아니면 마지막 수행분의 반대
+  function nextPart(dt){
+    var d = db.days[key(dt)];
+    if(d && d.part) return d.part;
+    var c = new Date(dt); c.setHours(0,0,0,0);
+    for(var i=0;i<120;i++){
+      c.setDate(c.getDate()-1);
+      var r = db.days[key(c)];
+      if(r && r.dumbbell && r.part) return r.part === 'upper' ? 'lower' : 'upper';
+    }
+    return 'upper'; // 기록이 없으면 상체부터
+  }
+
+  // 이번 주(일~토) 휴식 선언 횟수
+  function restCountThisWeek(now){
+    var s0 = startOfWeek(now), n = 0, c = new Date(s0);
+    for(var i=0;i<7;i++){
+      var r = db.days[key(c)];
+      if(r && r.rest) n++;
+      c.setDate(c.getDate()+1);
+    }
+    return n;
+  }
 
   var db = load();
   var calCursor = new Date();
   var mainTab = 'today', routineTab = 'upper';
 
   function load(){
-    try { var r = localStorage.getItem(KEY); return r ? JSON.parse(r) : {days:{}}; }
-    catch(e){ return {days:{}}; }
+    var o;
+    try { var r = localStorage.getItem(KEY); o = r ? JSON.parse(r) : {}; }
+    catch(e){ o = {}; }
+    if(!o || typeof o !== 'object') o = {};
+    if(!o.days) o.days = {};
+    if(!o.settings) o.settings = {};
+    if(typeof o.settings.rest !== 'number') o.settings.rest = 0; // 기본 일요일
+    return o;
   }
   function save(){
     try { localStorage.setItem(KEY, JSON.stringify(db)); }
@@ -582,7 +664,7 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
   }
   function pad(n){ return n < 10 ? '0'+n : ''+n; }
   function day(k){
-    if(!db.days[k]) db.days[k] = {circuit:false, dumbbell:false, round:false, drink:false, water:0};
+    if(!db.days[k]) db.days[k] = {circuit:false, dumbbell:false, round:false, range:false, drink:false, water:0, supp:{}, rest:false, part:null};
     return db.days[k];
   }
   function has(k){ return Object.prototype.hasOwnProperty.call(db.days, k); }
@@ -590,17 +672,16 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
   // 그날의 목표 항목 수와 달성 수
   function score(k, dateObj){
     var d = db.days[k]; if(!d) return {done:0, total:0};
-    var wd = dateObj.getDay();
-    var needDumbbell = PLAN[wd] !== null;
-    var total = 2 + (needDumbbell ? 1 : 0); // 물 + 무음주 + (덤벨)
-    var done = 0;
+    var rest = !!d.rest;
+    var total = 2, done = 0;          // 물 + 무음주는 휴식일에도 유지
     if(d.water >= 12) done++;
     if(!d.drink) done++;
-    if(needDumbbell && d.dumbbell) done++;
-    // 서킷은 라운딩으로 대체 가능
-    total += 1;
-    if(d.circuit || d.round) done++;
-    return {done:done, total:total};
+    if(!rest){
+      total += 2;                     // 서킷 + 덤벨
+      if(d.circuit || d.round || d.range) done++;
+      if(d.dumbbell) done++;
+    }
+    return {done:done, total:total, rest:rest};
   }
 
   /* ── 오늘 화면 ── */
@@ -623,34 +704,95 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
       if(this.classList.contains('locked')) return;
       var k = key(new Date()), d = day(k), f = this.dataset.key;
       d[f] = !d[f];
-      if(f === 'round' && d.round) d.circuit = true; // 라운딩 = 서킷 충족
+      if((f === 'round' || f === 'range') && d[f]) d.circuit = true; // 라운딩·골프연습 = 서킷 충족
+      if(f === 'dumbbell') d.part = d.dumbbell ? nextPart(new Date()) : null;
       save(); renderToday(); renderRecord();
     });
   });
+
+  /* ── 영양제 ── */
+  var SUPP = [
+    {t:'기상 공복', items:[['w','물 500ml']]},
+    {t:'첫 식사 직전', items:[['pb','유산균']]},
+    {t:'첫 식사 후', items:[['ms','밀크시슬'],['ca','아마칼디'],['vc','비타민C'],
+                          ['pyc','피크노제놀'],['cr1','크레아틴'],['cla1','CLA']]},
+    {t:'두 번째 식사 후', items:[['o3','오메가3'],['vb','비타민B'],['msm','MSM'],
+                              ['md','마데카솔'],['cr2','크레아틴'],['cla2','CLA']]},
+    {t:'취침 전', items:[['xg','잔티젠']]}
+  ];
+  var SUPP_TOTAL = SUPP.reduce(function(a,g){ return a + g.items.length; }, 0);
+
+  (function buildSupp(){
+    var box = document.getElementById('suppBox');
+    SUPP.forEach(function(g){
+      var wrap = document.createElement('div'); wrap.className = 'supp-grp';
+      var h = document.createElement('h4'); h.textContent = g.t; wrap.appendChild(h);
+      var row = document.createElement('div'); row.className = 'pills';
+      g.items.forEach(function(it){
+        var b = document.createElement('button');
+        b.className = 'pill'; b.type = 'button';
+        b.dataset.sid = it[0]; b.dataset.on = '0'; b.textContent = it[1];
+        b.setAttribute('aria-pressed','false');
+        b.addEventListener('click', function(){
+          var d = day(key(new Date()));
+          if(!d.supp) d.supp = {};
+          d.supp[this.dataset.sid] = !d.supp[this.dataset.sid];
+          save(); renderSupp();
+        });
+        row.appendChild(b);
+      });
+      wrap.appendChild(row); box.appendChild(wrap);
+    });
+  })();
+
+  function renderSupp(){
+    var d = day(key(new Date()));
+    if(!d.supp) d.supp = {};
+    var n = 0;
+    document.querySelectorAll('#suppBox .pill').forEach(function(b){
+      var on = !!d.supp[b.dataset.sid];
+      b.dataset.on = on ? '1' : '0';
+      b.setAttribute('aria-pressed', on);
+      if(on) n++;
+    });
+    document.getElementById('suppCnt').textContent = n + ' / ' + SUPP_TOTAL;
+  }
 
   function renderToday(){
     var now = new Date(), k = key(now), d = day(k), wd = now.getDay();
     document.getElementById('todayDate').textContent = (now.getMonth()+1) + '월 ' + now.getDate() + '일';
     document.getElementById('todayWeek').textContent = DOW[wd] + '요일';
 
-    var plan = PLAN[wd];
-    var label = plan === 'upper' ? '상체 덤벨' : plan === 'lower' ? '하체 덤벨' : '휴식일';
-    document.getElementById('dbLabel').textContent = plan ? label : '덤벨 세션 (오늘은 휴식)';
+    var d0 = day(k);
+    var rest = !!d0.rest;
+    var plan = nextPart(now);
+    var label = plan === 'upper' ? '상체 덤벨' : '하체 덤벨';
+    document.getElementById('dbLabel').textContent = rest ? '덤벨 세션 (오늘 휴식)' : label;
     document.getElementById('dbSub').textContent = plan === 'upper'
       ? '컬 · 해머컬 · 로우 · 리버스플라이 · 스밴드프레스'
-      : plan === 'lower' ? 'RDL 10kg · 리버스런지 5kg' : '일요일은 덤벨 없음';
-    document.getElementById('todayPlan').innerHTML = plan
-      ? '오늘은 <b>' + label + '</b> 날' : '오늘은 <b>휴식</b>. 서킷만 해도 된다';
+      : 'RDL 10kg · 리버스런지 5kg';
+    document.getElementById('todayPlan').innerHTML = rest
+      ? '오늘은 <b>휴식</b>. 영양제 · 물 · 무음주만 챙긴다'
+      : '오늘 차례는 <b>' + label + '</b>';
 
-    var dbBtn = document.querySelector('.chk[data-key="dumbbell"]');
-    dbBtn.classList.toggle('locked', !plan);
+    document.getElementById('restBanner').hidden = !rest;
+    document.getElementById('restToggle').dataset.on = rest ? '1' : '0';
+    document.getElementById('partSwap').textContent =
+      (plan === 'upper' ? '하체' : '상체') + '로 바꾸기';
+    document.getElementById('partSwap').hidden = rest;
+    document.getElementById('restWeek').textContent = restCountThisWeek(now);
+
+    ['dumbbell','circuit','round','range'].forEach(function(kk){
+      var b = document.querySelector('.chk[data-key="'+kk+'"]');
+      if(b) b.classList.toggle('locked', rest);
+    });
 
     document.querySelectorAll('.chk').forEach(function(b){
       b.dataset.on = d[b.dataset.key] ? '1' : '0';
     });
     // 라운딩이면 서킷 잠금 표시
     var cBtn = document.querySelector('.chk[data-key="circuit"]');
-    cBtn.classList.toggle('locked', !!d.round);
+    if(!rest) cBtn.classList.toggle('locked', !!(d.round || d.range));
 
     glassBox.querySelectorAll('.glass').forEach(function(g, idx){
       g.dataset.on = (idx < d.water) ? '1' : '0';
@@ -672,6 +814,8 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
     document.getElementById('ctrWeek').classList.toggle('warn-lv', wk >= 2);
     document.getElementById('ctrMonth').classList.toggle('warn-lv', mo >= 5);
 
+    renderSupp();
+
     var st = streaks();
     document.getElementById('streak').textContent = st.cur;
     document.getElementById('best').textContent = st.best;
@@ -680,10 +824,10 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
     var y = new Date(now); y.setDate(y.getDate()-1);
     var yk = key(y), yd = db.days[yk];
     var cw = document.getElementById('carryWarn');
-    if (yd && PLAN[y.getDay()] && !yd.dumbbell && yd.round){
+    if (yd && !isRest(y) && !yd.dumbbell && (yd.round || yd.range)){
       cw.hidden = false;
-      cw.innerHTML = '<b>어제 라운딩으로 덤벨을 건너뛰었다.</b> 오늘 여유가 있으면 ' +
-        (PLAN[y.getDay()]==='upper'?'상체':'하체') + ' 세션을 이월해서 해도 된다.';
+      cw.innerHTML = '<b>어제 골프로 덤벨을 건너뛰었다.</b> 오늘 여유가 있으면 ' +
+        (nextPart(now)==='upper'?'상체':'하체') + ' 세션을 이월해서 해도 된다.';
     } else { cw.hidden = true; }
   }
 
@@ -746,7 +890,7 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
       var e=document.createElement('div'); e.className='cell empty'; grid.appendChild(e);
     }
     var todayKey = key(new Date());
-    var exDone=0, exTotal=0, wDone=0, sober=0, rounds=0, logged=0;
+    var exDone=0, exTotal=0, wDone=0, sober=0, rounds=0, ranges=0, logged=0;
     for(var dnum=1; dnum<=last.getDate(); dnum++){
       var dt=new Date(y,m,dnum), k=key(dt);
       var cell=document.createElement('div'); cell.className='cell';
@@ -757,15 +901,18 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
       if(rec){
         logged++;
         var s=score(k,dt);
-        if(rec.drink) dot.style.background='var(--stop)';
+        if(rec.rest && !rec.drink) dot.style.background='var(--sun)';
+        else if(rec.drink) dot.style.background='var(--stop)';
         else if(s.done===s.total) dot.style.background='var(--ok)';
         else if(s.done>0) dot.style.background='var(--upper)';
         else dot.style.background='var(--line)';
         if(rec.water>=12) wDone++;
         if(!rec.drink) sober++;
         if(rec.round) rounds++;
-        var need = PLAN[dt.getDay()] ? 2 : 1;
-        var got = ((rec.circuit||rec.round)?1:0) + (PLAN[dt.getDay()] && rec.dumbbell ?1:0);
+        if(rec.range) ranges++;
+        var isR = !!rec.rest;
+        var need = isR ? 0 : 2;
+        var got = isR ? 0 : (((rec.circuit||rec.round||rec.range)?1:0) + (rec.dumbbell?1:0));
         exTotal += need; exDone += got;
       } else { dot.style.background='var(--line)'; }
       cell.appendChild(dot);
@@ -776,6 +923,7 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
     document.getElementById('sWater').textContent = logged ? Math.round(wDone/logged*100) : 0;
     document.getElementById('sSober').textContent = logged ? Math.round(sober/logged*100) : 0;
     document.getElementById('sRound').textContent = rounds;
+    document.getElementById('sRange').textContent = ranges;
     renderHistory();
   }
 
@@ -783,19 +931,20 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
     var months = {};
     Object.keys(db.days).forEach(function(k){
       var mk = k.slice(0,7);
-      if(!months[mk]) months[mk]={exD:0,exT:0,w:0,drink:0,n:0};
+      if(!months[mk]) months[mk]={exD:0,exT:0,w:0,drink:0,golf:0,n:0};
       var dt=new Date(k+'T00:00:00'), rec=db.days[k], o=months[mk];
       o.n++;
       if(rec.water>=12) o.w++;
       if(rec.drink) o.drink++;
-      var need = PLAN[dt.getDay()] ? 2 : 1;
-      o.exT += need;
-      o.exD += ((rec.circuit||rec.round)?1:0) + (PLAN[dt.getDay()] && rec.dumbbell ?1:0);
+      if(rec.round || rec.range) o.golf++;
+      var isR = !!rec.rest;
+      o.exT += isR ? 0 : 2;
+      o.exD += isR ? 0 : (((rec.circuit||rec.round||rec.range)?1:0) + (rec.dumbbell?1:0));
     });
     var keys = Object.keys(months).sort().reverse();
     var body = document.getElementById('histBody');
     if(!keys.length){
-      body.innerHTML = '<tr><td colspan="4" style="color:var(--ink-dim)">아직 기록이 없습니다.</td></tr>';
+      body.innerHTML = '<tr><td colspan="5" style="color:var(--ink-dim)">아직 기록이 없습니다.</td></tr>';
       return;
     }
     body.innerHTML = keys.map(function(mk){
@@ -804,6 +953,7 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
       return '<tr><td>'+(+p[1])+'월</td>'+
         '<td class="num">'+(o.exT?Math.round(o.exD/o.exT*100):0)+'%</td>'+
         '<td class="num">'+(o.n?Math.round(o.w/o.n*100):0)+'%</td>'+
+        '<td class="num" style="color:var(--ink-dim)">'+o.golf+'회</td>'+
         '<td class="num" style="color:'+(over?'var(--stop)':'var(--ink-dim)')+'">'+o.drink+' / 5</td></tr>';
     }).join('');
   }
@@ -906,11 +1056,27 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
   });
 
   // 오늘 요일에 맞는 루틴 탭 기본 선택
-  var todayPlan = PLAN[new Date().getDay()];
-  if(todayPlan) routineTab = todayPlan;
+  routineTab = nextPart(new Date());
   Object.keys(panels).forEach(function(k){ if(panels[k]) panels[k].hidden = (k!==routineTab); });
   document.querySelectorAll('[data-day]').forEach(function(x){
     x.setAttribute('aria-selected', x.dataset.day===routineTab);
+  });
+
+  document.getElementById('restToggle').addEventListener('click', function(){
+    var d = day(key(new Date()));
+    d.rest = !d.rest;
+    if(d.rest){ d.dumbbell = false; d.circuit = false; d.round = false; d.range = false; d.part = null; }
+    save(); renderToday(); renderRecord();
+  });
+  document.getElementById('partSwap').addEventListener('click', function(){
+    var now = new Date(), d = day(key(now));
+    d.part = (nextPart(now) === 'upper') ? 'lower' : 'upper';
+    save(); renderToday();
+    routineTab = d.part;
+    Object.keys(panels).forEach(function(x){ if(panels[x]) panels[x].hidden = (x!==routineTab); });
+    document.querySelectorAll('[data-day]').forEach(function(x){
+      x.setAttribute('aria-selected', x.dataset.day===routineTab);
+    });
   });
 
   renderToday();
