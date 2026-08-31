@@ -325,7 +325,7 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
       <div class="warn" id="deficitWarn" hidden></div>
       <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
         <div style="font-size:13px;color:var(--ink-dim);margin-bottom:8px">주간 체성분 (월요일 아침 공복)</div>
-        <div class="inrow">
+        <div class="inrow" id="compInputs">
           <div class="infield">
             <label>체중 kg</label>
             <input type="number" id="inWeight" step="0.1" inputmode="decimal" placeholder="—">
@@ -337,6 +337,7 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
         </div>
         <button class="pill" type="button" id="saveWeight" style="margin-top:9px;padding:11px 18px;width:100%">저장</button>
         <div style="font-family:var(--mono);font-size:11.5px;color:var(--ink-dim);margin-top:9px;line-height:1.6" id="weightNote">—</div>
+        <button class="pill" type="button" id="editWeight" hidden style="margin-top:9px;padding:9px 16px">수정</button>
       </div>
     </div>
   </section>
@@ -547,61 +548,6 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
     </div>
   </section>
 </div>
-</div>
-
-<!-- ═══════════ 기록 ═══════════ -->
-<div id="main-record" hidden>
-  <section>
-    <div class="cal-nav">
-      <button id="prevM" aria-label="이전 달">‹</button>
-      <div class="m" id="calMonth">—</div>
-      <button id="nextM" aria-label="다음 달">›</button>
-    </div>
-    <div class="cal" id="calGrid"></div>
-    <div class="legend">
-      <span><i style="background:var(--ok)"></i>전부 달성</span>
-      <span><i style="background:var(--upper)"></i>일부 달성</span>
-      <span><i style="background:var(--stop)"></i>음주</span>
-      <span><i style="background:var(--sun)"></i>휴식일</span>
-      <span><i style="background:var(--line)"></i>기록 없음</span>
-    </div>
-  </section>
-
-  <section>
-    <div class="sec-head"><h2>이번 달 달성률</h2><span id="statMonth">—</span></div>
-    <div class="stats">
-      <div class="stat"><div class="k">운동 (서킷+덤벨)</div><div class="v"><span id="sEx">0</span><small>%</small></div></div>
-      <div class="stat"><div class="k">물 3L 달성</div><div class="v"><span id="sWater">0</span><small>%</small></div></div>
-      <div class="stat"><div class="k">무음주일</div><div class="v"><span id="sSober">0</span><small>%</small></div></div>
-      <div class="stat"><div class="k">라운딩 · 연습</div><div class="v"><span id="sRound">0</span><small> / </small><span id="sRange">0</span><small> 회</small></div></div>
-    </div>
-  </section>
-
-  <section>
-    <div class="sec-head"><h2>최근 7일 평균</h2><span>INTAKE</span></div>
-    <div class="stats">
-      <div class="stat"><div class="k">섭취</div><div class="v"><span id="aKcal">—</span><small> kcal</small></div></div>
-      <div class="stat"><div class="k">수지</div><div class="v"><span id="aBal">—</span><small> kcal</small></div></div>
-      <div class="stat"><div class="k">단백질</div><div class="v"><span id="aProt">—</span><small> g</small></div></div>
-      <div class="stat"><div class="k">기록일</div><div class="v"><span id="aDays">0</span><small> / 7</small></div></div>
-    </div>
-  </section>
-
-  <section>
-    <div class="sec-head"><h2>월별 누적</h2><span>HISTORY</span></div>
-    <table>
-      <thead><tr><th>월</th><th>운동</th><th>물</th><th>골프</th><th>음주</th></tr></thead>
-      <tbody id="histBody"><tr><td colspan="5" style="color:var(--ink-dim)">아직 기록이 없습니다.</td></tr></tbody>
-    </table>
-    <div class="tools">
-      <button id="exportBtn">기록 내보내기 (JSON)</button>
-      <button id="importBtn">기록 불러오기</button>
-      <button id="wipeBtn" style="color:var(--stop);border-color:rgba(224,96,76,.4)">전체 삭제</button>
-    </div>
-    <input type="file" id="fileInput" accept="application/json" hidden>
-  </section>
-</div>
-
 <!-- ═══════════ 공통 ═══════════ -->
 <section>
   <div class="sec-head"><h2>즉시 중단 신호</h2><span>STOP</span></div>
@@ -665,6 +611,75 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
   </div>
 </section>
 
+</div>
+
+<!-- ═══════════ 기록 ═══════════ -->
+<div id="main-record" hidden>
+  <section>
+    <div class="sec-head"><h2>이번 주</h2><span id="wkRange">—</span></div>
+    <div class="stats">
+      <div class="stat"><div class="k">실행률</div><div class="v"><span id="wEx">0</span><small>%</small></div></div>
+      <div class="stat"><div class="k">수지 누계</div><div class="v" id="wBalBox"><span id="wBal">—</span><small> kcal</small></div></div>
+      <div class="stat"><div class="k">음주</div><div class="v"><span id="wDrinkN">0</span><small> / 2</small></div></div>
+      <div class="stat"><div class="k">단백질 평균</div><div class="v"><span id="wProt">—</span><small> g</small></div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>이번 달</h2><span id="statMonth">—</span></div>
+    <div class="stats">
+      <div class="stat"><div class="k">실행률</div><div class="v"><span id="sEx">0</span><small>%</small></div></div>
+      <div class="stat"><div class="k">수지 누계</div><div class="v" id="mBalBox"><span id="mBal">—</span><small> kcal</small></div></div>
+      <div class="stat"><div class="k">음주</div><div class="v"><span id="mDrinkN">0</span><small> / 5</small></div></div>
+      <div class="stat"><div class="k">물 3L 달성</div><div class="v"><span id="sWater">0</span><small>%</small></div></div>
+    </div>
+    <div class="stats" style="margin-top:9px">
+      <div class="stat"><div class="k">무음주일</div><div class="v"><span id="sSober">0</span><small>%</small></div></div>
+      <div class="stat"><div class="k">라운딩 · 연습</div><div class="v"><span id="sRound">0</span><small> / </small><span id="sRange">0</span><small> 회</small></div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="cal-nav">
+      <button id="prevM" aria-label="이전 달">‹</button>
+      <div class="m" id="calMonth">—</div>
+      <button id="nextM" aria-label="다음 달">›</button>
+    </div>
+    <div class="cal" id="calGrid"></div>
+    <div class="legend">
+      <span><i style="background:var(--ok)"></i>전부 달성</span>
+      <span><i style="background:var(--upper)"></i>일부 달성</span>
+      <span><i style="background:var(--stop)"></i>음주</span>
+      <span><i style="background:var(--sun)"></i>휴식일</span>
+      <span><i style="background:var(--line)"></i>기록 없음</span>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>최근 7일 평균</h2><span>INTAKE</span></div>
+    <div class="stats">
+      <div class="stat"><div class="k">섭취</div><div class="v"><span id="aKcal">—</span><small> kcal</small></div></div>
+      <div class="stat"><div class="k">수지</div><div class="v"><span id="aBal">—</span><small> kcal</small></div></div>
+      <div class="stat"><div class="k">단백질</div><div class="v"><span id="aProt">—</span><small> g</small></div></div>
+      <div class="stat"><div class="k">기록일</div><div class="v"><span id="aDays">0</span><small> / 7</small></div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>월별 누적</h2><span>HISTORY</span></div>
+    <table>
+      <thead><tr><th>월</th><th>운동</th><th>수지</th><th>물</th><th>음주</th></tr></thead>
+      <tbody id="histBody"><tr><td colspan="5" style="color:var(--ink-dim)">아직 기록이 없습니다.</td></tr></tbody>
+    </table>
+    <div class="tools">
+      <button id="exportBtn">기록 내보내기 (JSON)</button>
+      <button id="importBtn">기록 불러오기</button>
+      <button id="wipeBtn" style="color:var(--stop);border-color:rgba(224,96,76,.4)">전체 삭제</button>
+    </div>
+    <input type="file" id="fileInput" accept="application/json" hidden>
+  </section>
+</div>
+
 <footer>
   기준 체중 93.7kg (2026-08-17 월요일 공복) · 다음 기준점 2026-09-01(월)<br>
   기록은 이 브라우저에만 저장된다. 기기를 바꾸기 전에 <b>기록 내보내기</b>로 백업할 것.<br>
@@ -678,6 +693,7 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
   "use strict";
   var KEY = 'shower_anchor_v1';
   var DOW = ['일','월','화','수','목','금','토'];
+  var CAL_DOW = ['월','화','수','목','금','토','일'];
   // 요일별 덤벨 배정: 0=일 휴식, 1/3/5=상체, 2/4/6=하체
   // 요일 고정 없음. 마지막으로 수행한 덤벨 세션의 반대가 다음 차례가 된다.
   function isRest(dt){ var d = db.days[key(dt)]; return !!(d && d.rest); }
@@ -825,14 +841,17 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
 
   /* ── 대사량 계산 ── */
   var PROT_TARGET = 150;
+  var compEditing = false;
 
   // 해당 시점 이전의 가장 최근 체성분 기록 {w, f}
   function comp(dt){
-    var best = null, bestK = null, kk = key(dt);
+    var best = null, bestK = null, first = null, firstK = null, kk = key(dt);
     Object.keys(db.weights || {}).forEach(function(k){
       if(k <= kk && (bestK === null || k > bestK)){ bestK = k; best = db.weights[k]; }
+      if(firstK === null || k < firstK){ firstK = k; first = db.weights[k]; }
     });
-    return best; // null이면 미입력
+    // 해당 날짜 이전 기록이 없으면 가장 이른 측정값으로 대체한다(과거 수지 계산용)
+    return best || first;
   }
   // Katch-McArdle: 370 + 21.6 × 제지방량
   function bmr(c){
@@ -891,19 +910,47 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
     }
 
     var wIn = document.getElementById('inWeight'), fIn = document.getElementById('inFat');
-    if(document.activeElement !== wIn) wIn.value = '';
-    if(document.activeElement !== fIn) fIn.value = '';
-    if(c){
-      wIn.placeholder = c.w.toFixed(1); fIn.placeholder = c.f.toFixed(1);
+    var box = document.getElementById('compInputs');
+    var saveBtn = document.getElementById('saveWeight'), editBtn = document.getElementById('editWeight');
+    var note = document.getElementById('weightNote');
+
+    if(c && !compEditing){
+      // 입력 완료 상태 — 값 고정
+      box.hidden = true; saveBtn.hidden = true; editBtn.hidden = false;
       var lbm = c.w - c.f, pctF = c.f / c.w * 100;
-      document.getElementById('weightNote').innerHTML =
-        c.w.toFixed(1) + 'kg · 체지방 ' + c.f.toFixed(1) + 'kg (' + pctF.toFixed(1) + '%)<br>' +
-        '제지방 ' + lbm.toFixed(1) + 'kg · BMR ' + b.toLocaleString() + ' kcal (Katch-McArdle)';
+      note.innerHTML =
+        '<span style="color:var(--ink);font-size:14px">' + c.w.toFixed(1) + 'kg · 체지방 ' +
+        c.f.toFixed(1) + 'kg (' + pctF.toFixed(1) + '%)</span><br>' +
+        '제지방 ' + lbm.toFixed(1) + 'kg · BMR ' + b.toLocaleString() + ' kcal<br>' +
+        '<span style="color:var(--accent)">' + compDateLabel() + ' 입력 · 다음 ' + nextMondayLabel() + '</span>';
     } else {
-      wIn.placeholder = '—'; fIn.placeholder = '—';
-      document.getElementById('weightNote').textContent =
-        '체중과 체지방량을 함께 입력해야 BMR이 계산된다.';
+      box.hidden = false; saveBtn.hidden = false; editBtn.hidden = true;
+      if(document.activeElement !== wIn && !compEditing) wIn.value = '';
+      if(document.activeElement !== fIn && !compEditing) fIn.value = '';
+      if(c){
+        wIn.placeholder = c.w.toFixed(1); fIn.placeholder = c.f.toFixed(1);
+        note.textContent = '새 값을 넣고 저장하면 이번 주 기준이 바뀐다.';
+      } else {
+        wIn.placeholder = '—'; fIn.placeholder = '—';
+        note.textContent = '체중과 체지방량을 함께 입력해야 BMR이 계산된다.';
+      }
     }
+  }
+
+  function compDateLabel(){
+    var bestK = null;
+    Object.keys(db.weights || {}).forEach(function(k){
+      if(k <= key(new Date()) && (bestK === null || k > bestK)) bestK = k;
+    });
+    if(!bestK) return '—';
+    var pp = bestK.split('-');
+    var dd = new Date(bestK + 'T00:00:00');
+    return (+pp[1]) + '/' + (+pp[2]) + '(' + DOW[dd.getDay()] + ')';
+  }
+  function nextMondayLabel(){
+    var c2 = new Date(); c2.setHours(0,0,0,0);
+    do { c2.setDate(c2.getDate() + 1); } while (c2.getDay() !== 1);
+    return (c2.getMonth()+1) + '/' + c2.getDate() + '(월)';
   }
 
   ['inKcal','inProt'].forEach(function(id){
@@ -922,8 +969,65 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
     if(!db.weights) db.weights = {};
     db.weights[key(new Date())] = {w: Math.round(wv*10)/10, f: Math.round(fv*10)/10};
     wEl.value = ''; fEl.value = ''; wEl.blur(); fEl.blur();
+    compEditing = false;
     save(); renderIntake(); renderRecord();
   });
+
+  document.getElementById('editWeight').addEventListener('click', function(){
+    compEditing = true; renderIntake();
+  });
+
+  // 기간 집계: [from, to] 사이 실행률·수지·음주·단백질
+  function aggregate(from, to){
+    var exD=0, exT=0, bal=0, nb=0, drink=0, prot=0, np=0, logged=0;
+    var c = new Date(from); c.setHours(0,0,0,0);
+    var end = new Date(to); end.setHours(0,0,0,0);
+    while(c <= end){
+      var k2 = key(c), r = db.days[k2];
+      if(r){
+        logged++;
+        if(r.drink) drink++;
+        if(!r.rest){
+          exT += 2;
+          exD += ((r.circuit||r.round||r.range)?1:0) + (r.dumbbell?1:0);
+        }
+        if(r.kcal !== null && r.kcal !== undefined && r.kcal !== ''){
+          var t2 = tdee(new Date(c));
+          if(t2 !== null){ bal += (r.kcal - t2); nb++; }
+        }
+        if(r.prot !== null && r.prot !== undefined && r.prot !== ''){ prot += r.prot; np++; }
+      }
+      c.setDate(c.getDate()+1);
+    }
+    return {exPct: exT ? Math.round(exD/exT*100) : 0, bal: nb ? bal : null,
+            drink: drink, prot: np ? Math.round(prot/np) : null, logged: logged};
+  }
+  function balClass(v){ return 'v' ; }
+  function paintBal(boxId, elId, v){
+    var el = document.getElementById(elId), box = document.getElementById(boxId);
+    if(v === null){ el.textContent = '—'; box.style.color = ''; return; }
+    el.textContent = (v > 0 ? '+' : '') + v.toLocaleString();
+    box.style.color = v > 0 ? 'var(--stop)' : 'var(--ok)';
+  }
+
+  function renderPeriods(){
+    var now = new Date();
+    var ws = startOfWeek(now);
+    var w = aggregate(ws, now);
+    document.getElementById('wkRange').textContent =
+      (ws.getMonth()+1) + '/' + ws.getDate() + ' ~ ' + (now.getMonth()+1) + '/' + now.getDate();
+    document.getElementById('wEx').textContent = w.exPct;
+    paintBal('wBalBox','wBal', w.bal);
+    document.getElementById('wDrinkN').textContent = w.drink;
+    document.getElementById('wProt').textContent = w.prot === null ? '—' : w.prot;
+
+    var y = calCursor.getFullYear(), m = calCursor.getMonth();
+    var m0 = new Date(y, m, 1), m1 = new Date(y, m+1, 0);
+    var mm = aggregate(m0, m1);
+    document.getElementById('sEx').textContent = mm.exPct;
+    paintBal('mBalBox','mBal', mm.bal);
+    document.getElementById('mDrinkN').textContent = mm.drink;
+  }
 
   function renderAverages(){
     var now = new Date(), sumK=0, sumB=0, sumP=0, n=0, np=0, nb=0;
@@ -1018,8 +1122,12 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
     } else { cw.hidden = true; }
   }
 
+  // 주 시작은 월요일(한국 기준). 일요일은 그 주의 마지막 날이다.
   function startOfWeek(d){
-    var s = new Date(d); s.setHours(0,0,0,0); s.setDate(s.getDate() - s.getDay()); return s;
+    var s = new Date(d); s.setHours(0,0,0,0);
+    var off = (s.getDay() + 6) % 7;   // 월=0 ... 일=6
+    s.setDate(s.getDate() - off);
+    return s;
   }
   function countDrink(from, to){
     var n=0, c=new Date(from);
@@ -1069,11 +1177,12 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
     document.getElementById('calMonth').textContent = y + '년 ' + (m+1) + '월';
     var grid = document.getElementById('calGrid');
     grid.innerHTML = '';
-    DOW.forEach(function(w){
+    CAL_DOW.forEach(function(w){
       var e=document.createElement('div'); e.className='dow'; e.textContent=w; grid.appendChild(e);
     });
     var first = new Date(y,m,1), last = new Date(y,m+1,0);
-    for(var i=0;i<first.getDay();i++){
+    var lead = (first.getDay() + 6) % 7;   // 월요일 시작 기준 앞 빈칸
+    for(var i=0;i<lead;i++){
       var e=document.createElement('div'); e.className='cell empty'; grid.appendChild(e);
     }
     var todayKey = key(new Date());
@@ -1106,11 +1215,11 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
       grid.appendChild(cell);
     }
     document.getElementById('statMonth').textContent = (m+1)+'월 · 기록 '+logged+'일';
-    document.getElementById('sEx').textContent = exTotal ? Math.round(exDone/exTotal*100) : 0;
     document.getElementById('sWater').textContent = logged ? Math.round(wDone/logged*100) : 0;
     document.getElementById('sSober').textContent = logged ? Math.round(sober/logged*100) : 0;
     document.getElementById('sRound').textContent = rounds;
     document.getElementById('sRange').textContent = ranges;
+    renderPeriods();
     renderAverages();
     renderHistory();
   }
@@ -1119,12 +1228,14 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
     var months = {};
     Object.keys(db.days).forEach(function(k){
       var mk = k.slice(0,7);
-      if(!months[mk]) months[mk]={exD:0,exT:0,w:0,drink:0,golf:0,n:0};
+      if(!months[mk]) months[mk]={exD:0,exT:0,w:0,drink:0,bal:0,nb:0,n:0};
       var dt=new Date(k+'T00:00:00'), rec=db.days[k], o=months[mk];
       o.n++;
       if(rec.water>=12) o.w++;
       if(rec.drink) o.drink++;
-      if(rec.round || rec.range) o.golf++;
+      if(rec.kcal !== null && rec.kcal !== undefined && rec.kcal !== ''){
+        var tb = tdee(dt); if(tb !== null){ o.bal += (rec.kcal - tb); o.nb++; }
+      }
       var isR = !!rec.rest;
       o.exT += isR ? 0 : 2;
       o.exD += isR ? 0 : (((rec.circuit||rec.round||rec.range)?1:0) + (rec.dumbbell?1:0));
@@ -1140,8 +1251,9 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
       var over = o.drink > 5;
       return '<tr><td>'+(+p[1])+'월</td>'+
         '<td class="num">'+(o.exT?Math.round(o.exD/o.exT*100):0)+'%</td>'+
+        '<td class="num" style="color:'+(o.nb ? (o.bal>0?'var(--stop)':'var(--ok)') : 'var(--ink-dim)')+'">'+
+          (o.nb ? ((o.bal>0?'+':'')+Math.round(o.bal).toLocaleString()) : '—')+'</td>'+
         '<td class="num">'+(o.n?Math.round(o.w/o.n*100):0)+'%</td>'+
-        '<td class="num" style="color:var(--ink-dim)">'+o.golf+'회</td>'+
         '<td class="num" style="color:'+(over?'var(--stop)':'var(--ink-dim)')+'">'+o.drink+' / 5</td></tr>';
     }).join('');
   }
