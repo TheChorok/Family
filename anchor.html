@@ -101,6 +101,20 @@ section{margin-top:24px}
 .supp-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:11px}
 .supp-head .cnt{font-family:var(--mono);font-size:13px;color:var(--accent);font-weight:700}
 
+/* 날짜 이동 */
+.datebar{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.datebar .lbl{font-family:var(--mono);font-size:12px;color:var(--sun);flex:1;min-width:0}
+.datebar button{appearance:none;background:var(--surface-2);border:1px solid var(--line);
+  color:var(--ink);border-radius:8px;font-family:inherit;font-size:12px;padding:8px 13px;cursor:pointer}
+.ro-badge{display:inline-block;padding:5px 10px;border-radius:999px;font-size:11px;
+  background:rgba(224,96,76,.14);border:1px solid rgba(224,96,76,.35);color:var(--stop)}
+.cell{cursor:pointer}
+.cell.sel{outline:2px solid var(--sun);outline-offset:-1px}
+.cell.future{opacity:.3;cursor:default}
+body.readonly .chk,body.readonly .glass,body.readonly #suppBox .pill,
+body.readonly #restToggle,body.readonly #partSwap,body.readonly .infield input,
+body.readonly #saveWeight{pointer-events:none;opacity:.55}
+
 /* 활동 소모 */
 .burn{margin-top:13px;padding:13px;border-radius:11px;background:var(--surface-2);border:1px solid var(--line)}
 .burn-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
@@ -246,6 +260,11 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
 
 <!-- ═══════════ 오늘 ═══════════ -->
 <div id="main-today">
+  <div class="datebar" id="dateBar" hidden>
+    <span class="lbl" id="dateLbl">—</span>
+    <span id="roBadge"></span>
+    <button type="button" id="backToday">오늘로</button>
+  </div>
   <section>
     <div class="card grad">
       <div class="today-top">
@@ -758,6 +777,15 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
   }
 
   var db = load();
+  var viewDate = new Date();                       // 지금 보고 있는 날짜
+  function curDate(){ return new Date(viewDate); }
+  function isToday(){ return key(viewDate) === key(new Date()); }
+  function daysAgo(dt){
+    var a = new Date(); a.setHours(0,0,0,0);
+    var b2 = new Date(dt); b2.setHours(0,0,0,0);
+    return Math.round((a - b2) / 86400000);
+  }
+  function editable(){ var n = daysAgo(viewDate); return n >= 0 && n <= 7; }
   var calCursor = new Date();
   var mainTab = 'today', routineTab = 'upper';
 
@@ -818,7 +846,8 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
     g.className = 'glass'; g.type='button'; g.dataset.on='0'; g.dataset.idx = i;
     g.textContent = (i+1);
     g.addEventListener('click', function(){
-      var k = key(new Date()), d = day(k);
+      if(!editable()) return;
+      var k = key(curDate()), d = day(k);
       var idx = parseInt(this.dataset.idx,10);
       d.water = (d.water === idx+1) ? idx : idx+1;
       save(); renderToday();
@@ -829,9 +858,10 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
   document.querySelectorAll('.chk').forEach(function(btn){
     btn.addEventListener('click', function(){
       if(this.classList.contains('locked')) return;
-      var k = key(new Date()), d = day(k), f = this.dataset.key;
+      if(!editable()) return;
+      var k = key(curDate()), d = day(k), f = this.dataset.key;
       d[f] = !d[f];
-      if(f === 'dumbbell') d.part = d.dumbbell ? nextPart(new Date()) : null;
+      if(f === 'dumbbell') d.part = d.dumbbell ? nextPart(curDate()) : null;
       save(); renderToday(); renderRecord();
     });
   });
@@ -859,7 +889,8 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
         b.dataset.sid = it[0]; b.dataset.on = '0'; b.textContent = it[1];
         b.setAttribute('aria-pressed','false');
         b.addEventListener('click', function(){
-          var d = day(key(new Date()));
+          if(!editable()) return;
+          var d = day(key(curDate()));
           if(!d.supp) d.supp = {};
           d.supp[this.dataset.sid] = !d.supp[this.dataset.sid];
           save(); renderToday();
@@ -871,7 +902,7 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
   })();
 
   function renderSupp(){
-    var d = day(key(new Date()));
+    var d = day(key(curDate()));
     if(!d.supp) d.supp = {};
     var n = 0;
     document.querySelectorAll('#suppBox .pill').forEach(function(b){
@@ -932,7 +963,7 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
   }
 
   function renderIntake(){
-    var now = new Date(), k = key(now), d = day(k);
+    var now = curDate(), k = key(now), d = day(k);
     var c = comp(now), b = bmr(c), t = tdee(now);
 
     // ── 활동 소모 내역
@@ -1025,7 +1056,7 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
   function compDateLabel(){
     var bestK = null;
     Object.keys(db.weights || {}).forEach(function(k){
-      if(k <= key(new Date()) && (bestK === null || k > bestK)) bestK = k;
+      if(k <= key(curDate()) && (bestK === null || k > bestK)) bestK = k;
     });
     if(!bestK) return '—';
     var pp = bestK.split('-');
@@ -1040,7 +1071,8 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
 
   ['inKcal','inProt'].forEach(function(id){
     document.getElementById(id).addEventListener('input', function(){
-      var d = day(key(new Date()));
+      if(!editable()) return;
+      var d = day(key(curDate()));
       var v = this.value === '' ? null : Math.max(0, parseInt(this.value,10) || 0);
       d[id === 'inKcal' ? 'kcal' : 'prot'] = v;
       save(); renderIntake();
@@ -1052,13 +1084,18 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
     if(isNaN(wv) || wv < 30 || wv > 300) return;
     if(isNaN(fv) || fv < 1 || fv >= wv) return;      // 체지방은 체중보다 작아야 한다
     if(!db.weights) db.weights = {};
-    db.weights[key(new Date())] = {w: Math.round(wv*10)/10, f: Math.round(fv*10)/10};
+    db.weights[key(curDate())] = {w: Math.round(wv*10)/10, f: Math.round(fv*10)/10};
     wEl.value = ''; fEl.value = ''; wEl.blur(); fEl.blur();
     compEditing = false;
     save(); renderIntake(); renderRecord();
   });
 
+  document.getElementById('backToday').addEventListener('click', function(){
+    viewDate = new Date(); compEditing = false;
+    renderToday(); renderRecord();
+  });
   document.getElementById('editWeight').addEventListener('click', function(){
+    if(!editable()) return;
     compEditing = true; renderIntake();
   });
 
@@ -1145,7 +1182,7 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
   }
 
   function renderToday(){
-    var now = new Date(), k = key(now), d = day(k), wd = now.getDay();
+    var now = curDate(), k = key(now), d = day(k), wd = now.getDay();
     document.getElementById('todayDate').textContent = (now.getMonth()+1) + '월 ' + now.getDate() + '일';
     document.getElementById('todayWeek').textContent = DOW[wd] + '요일';
 
@@ -1206,12 +1243,24 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
     renderSupp();
     renderIntake();
 
+    // 날짜 바 / 읽기전용 상태
+    var bar = document.getElementById('dateBar');
+    var ago = daysAgo(viewDate), ed = editable();
+    bar.hidden = isToday();
+    document.getElementById('dateLbl').textContent =
+      (now.getMonth()+1) + '월 ' + now.getDate() + '일 (' + DOW[now.getDay()] + ') · ' +
+      (ago === 0 ? '오늘' : ago + '일 전');
+    document.getElementById('roBadge').innerHTML =
+      ed ? '' : '<span class="ro-badge">읽기 전용 · 7일 지남</span>';
+    document.body.classList.toggle('readonly', !ed);
+
+
     var st = streaks();
     document.getElementById('streak').textContent = st.cur;
     document.getElementById('best').textContent = st.best;
 
     // 어제 덤벨 이월 안내
-    var y = new Date(now); y.setDate(y.getDate()-1);
+    var y = curDate(); y.setDate(y.getDate()-1);
     var yk = key(y), yd = db.days[yk];
     var cw = document.getElementById('carryWarn');
     if (yd && !isRest(y) && !yd.dumbbell && (yd.round || yd.range)){
@@ -1290,6 +1339,16 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
       var dt=new Date(y,m,dnum), k=key(dt);
       var cell=document.createElement('div'); cell.className='cell';
       if(k===todayKey) cell.classList.add('today');
+      if(k===key(viewDate) && k!==todayKey) cell.classList.add('sel');
+      if(dt > new Date()) cell.classList.add('future');
+      else {
+        cell.dataset.k = k;
+        cell.addEventListener('click', function(){
+          viewDate = new Date(this.dataset.k + 'T00:00:00');
+          compEditing = false;
+          document.querySelector('[data-main="today"]').click();
+        });
+      }
       var num=document.createElement('span'); num.textContent=dnum; cell.appendChild(num);
       var dot=document.createElement('span'); dot.className='dot';
       var rec=db.days[k];
@@ -1459,13 +1518,15 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
   });
 
   document.getElementById('restToggle').addEventListener('click', function(){
-    var d = day(key(new Date()));
+    if(!editable()) return;
+    var d = day(key(curDate()));
     d.rest = !d.rest;
     if(d.rest){ d.dumbbell = false; d.circuit = false; d.round = false; d.range = false; d.part = null; }
     save(); renderToday(); renderRecord();
   });
   document.getElementById('partSwap').addEventListener('click', function(){
-    var now = new Date(), d = day(key(now));
+    if(!editable()) return;
+    var now = curDate(), d = day(key(now));
     d.part = (nextPart(now) === 'upper') ? 'lower' : 'upper';
     save(); renderToday();
     routineTab = d.part;
