@@ -1,0 +1,1483 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>샤워 앵커 · 기신 대표님</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+:root{
+  --bg:#131619; --surface:#1C2126; --surface-2:#242B31; --line:#333C44;
+  --ink:#E9E7E2; --ink-dim:#98A1A9;
+  --upper:#E0A458; --lower:#7FA45C; --sun:#8AA8C8; --water:#5AA8C4;
+  --stop:#E0604C; --ok:#7FA45C;
+  --accent:#E0A458;
+  --mono:ui-monospace,"SFMono-Regular","JetBrains Mono",Menlo,monospace;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);
+  font-family:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  font-size:16px;line-height:1.6;padding:0 0 80px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:560px;margin:0 auto;padding:0 16px}
+
+header{padding:24px 0 16px;border-bottom:1px solid var(--line)}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.16em;color:var(--ink-dim);text-transform:uppercase}
+h1{margin:6px 0 4px;font-size:25px;font-weight:800;letter-spacing:-.02em;line-height:1.25}
+.sub{color:var(--ink-dim);font-size:13px;margin:0}
+
+nav{position:sticky;top:0;z-index:20;background:rgba(19,22,25,.95);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line);margin:0 -16px;padding:8px 16px}
+.tabs{display:grid;gap:6px}
+.tabs.main{grid-template-columns:1fr 1fr 1fr}
+.tabs.sub{grid-template-columns:1fr 1fr 1fr;margin-top:6px}
+.tab{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--ink-dim);
+  border-radius:9px;padding:10px 4px;cursor:pointer;font-family:inherit;font-size:13px;
+  font-weight:600;line-height:1.3;transition:.15s}
+.tab small{display:block;font-family:var(--mono);font-size:10px;opacity:.7;margin-top:2px;font-weight:400}
+.tab[aria-selected="true"]{background:var(--accent);color:#14181B;border-color:var(--accent)}
+.tab.sm{padding:7px 4px;font-size:12px}
+.tab:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+section{margin-top:24px}
+.sec-head{display:flex;align-items:baseline;gap:9px;margin-bottom:10px}
+.sec-head h2{margin:0;font-size:17px;font-weight:700;letter-spacing:-.01em}
+.sec-head span{font-family:var(--mono);font-size:11px;color:var(--ink-dim)}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:15px}
+.card.grad{background:linear-gradient(160deg,var(--surface-2),var(--surface))}
+
+/* 오늘 링 */
+.today-top{display:flex;align-items:center;gap:16px}
+.ring{width:92px;height:92px;flex:0 0 92px;position:relative}
+.ring svg{transform:rotate(-90deg)}
+.ring .val{position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;font-family:var(--mono)}
+.ring .val b{font-size:21px;font-weight:700;line-height:1}
+.ring .val small{font-size:9.5px;color:var(--ink-dim);letter-spacing:.08em;margin-top:3px}
+.today-meta{flex:1;min-width:0}
+.today-meta .d{font-size:19px;font-weight:700;letter-spacing:-.01em}
+.today-meta .w{font-family:var(--mono);font-size:11.5px;color:var(--ink-dim);margin-top:2px}
+.today-meta .plan{margin-top:8px;font-size:13px;color:var(--ink-dim)}
+.today-meta .plan b{color:var(--accent)}
+
+/* 체크 항목 */
+.checks{display:grid;gap:8px;margin-top:14px}
+.chk{display:flex;align-items:center;gap:12px;padding:13px 14px;border-radius:11px;
+  background:var(--surface);border:1px solid var(--line);cursor:pointer;transition:.15s;
+  font-family:inherit;font-size:15px;color:var(--ink);text-align:left;width:100%;appearance:none}
+.chk .box{width:24px;height:24px;flex:0 0 24px;border-radius:7px;border:2px solid var(--line);
+  display:flex;align-items:center;justify-content:center;font-size:14px;color:transparent;transition:.15s}
+.chk .txt{flex:1;min-width:0}
+.chk .txt b{display:block;font-weight:600;font-size:15px}
+.chk .txt small{display:block;color:var(--ink-dim);font-size:12px;font-weight:400;margin-top:1px}
+.chk[data-on="1"]{border-color:var(--accent);background:rgba(224,164,88,.09)}
+.chk[data-on="1"] .box{background:var(--accent);border-color:var(--accent);color:#14181B}
+.chk.drink[data-on="1"]{border-color:var(--stop);background:rgba(224,96,76,.1)}
+.chk.drink[data-on="1"] .box{background:var(--stop);border-color:var(--stop)}
+.chk.locked{opacity:.55;cursor:default}
+.chk:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+/* 물 */
+.glasses{display:grid;grid-template-columns:repeat(6,1fr);gap:7px;margin-top:12px}
+.glass{aspect-ratio:1/1.25;border-radius:8px;border:1.5px solid var(--line);background:transparent;
+  cursor:pointer;font-family:var(--mono);font-size:11px;color:var(--ink-dim);transition:.15s;
+  display:flex;align-items:center;justify-content:center;appearance:none;padding:0}
+.glass[data-on="1"]{background:var(--water);border-color:var(--water);color:#0E1417;font-weight:700}
+.water-head{display:flex;justify-content:space-between;align-items:baseline}
+.water-head .amt{font-family:var(--mono);font-size:13px;color:var(--water);font-weight:700}
+
+/* 영양제 */
+.supp-grp{margin-bottom:12px}
+.supp-grp:last-child{margin-bottom:0}
+.supp-grp h4{margin:0 0 7px;font-size:12px;font-family:var(--mono);letter-spacing:.06em;
+  color:var(--ink-dim);text-transform:uppercase;font-weight:600}
+.pills{display:flex;flex-wrap:wrap;gap:6px}
+.pill{appearance:none;border:1px solid var(--line);background:transparent;color:var(--ink-dim);
+  border-radius:999px;padding:8px 13px;font-family:inherit;font-size:13px;cursor:pointer;transition:.15s}
+.pill[data-on="1"]{background:var(--accent);border-color:var(--accent);color:#14181B;font-weight:600}
+.pill:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.supp-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:11px}
+.supp-head .cnt{font-family:var(--mono);font-size:13px;color:var(--accent);font-weight:700}
+
+/* 활동 소모 */
+.burn{margin-top:13px;padding:13px;border-radius:11px;background:var(--surface-2);border:1px solid var(--line)}
+.burn-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
+.burn-head .t{font-size:13px;color:var(--ink-dim)}
+.burn-head .n{font-family:var(--mono);font-size:19px;font-weight:800;color:var(--ok)}
+.blist{display:grid;gap:5px}
+.brow{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12.5px}
+.brow .l{color:var(--ink-dim)}
+.brow .r{color:var(--ink)}
+.brow.base .l,.brow.base .r{color:var(--ink-dim)}
+.brow.act .r{color:var(--ok);font-weight:700}
+.brow.sum{border-top:1px solid var(--line);margin-top:5px;padding-top:7px}
+.brow.sum .l{color:var(--ink);font-weight:600}
+.brow.sum .r{color:var(--ink);font-weight:800;font-size:14px}
+.badge{display:inline-block;margin-top:9px;padding:6px 12px;border-radius:999px;
+  background:rgba(127,164,92,.16);border:1px solid rgba(127,164,92,.4);
+  color:var(--ok);font-size:12px;font-weight:700}
+
+/* 입력 */
+.inrow{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:4px}
+.infield label{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;
+  color:var(--ink-dim);text-transform:uppercase;margin-bottom:5px}
+.infield input{width:100%;background:var(--surface-2);border:1px solid var(--line);color:var(--ink);
+  border-radius:9px;padding:12px 13px;font-family:var(--mono);font-size:18px;font-weight:700;
+  text-align:right;appearance:none;-moz-appearance:textfield}
+.infield input::-webkit-outer-spin-button,.infield input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.infield input:focus{outline:none;border-color:var(--accent)}
+.readout{margin-top:13px;display:grid;gap:8px}
+.ro{display:flex;justify-content:space-between;align-items:baseline;padding:11px 13px;
+  border-radius:10px;background:var(--surface-2);border:1px solid var(--line)}
+.ro .k{font-size:13px;color:var(--ink-dim)}
+.ro .v{font-family:var(--mono);font-size:16px;font-weight:700}
+.ro.good .v{color:var(--ok)} .ro.bad .v{color:var(--stop)} .ro.mid .v{color:var(--upper)}
+.wbox{display:flex;gap:9px;align-items:flex-end;margin-top:4px}
+.wbox .infield{flex:1}
+
+/* 카운터 */
+.counters{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+.ctr{background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:12px 13px}
+.ctr .k{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;color:var(--ink-dim);text-transform:uppercase}
+.ctr .v{font-family:var(--mono);font-size:22px;font-weight:700;margin-top:3px;line-height:1}
+.ctr .v small{font-size:13px;color:var(--ink-dim);font-weight:400}
+.ctr.warn-lv{border-color:rgba(224,96,76,.5);background:rgba(224,96,76,.08)}
+.ctr.warn-lv .v{color:var(--stop)}
+
+/* 달력 */
+.cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.cal-nav button{appearance:none;background:var(--surface);border:1px solid var(--line);color:var(--ink);
+  border-radius:8px;width:34px;height:34px;font-size:15px;cursor:pointer;font-family:inherit}
+.cal-nav .m{font-family:var(--mono);font-size:14px;font-weight:700}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.cal .dow{text-align:center;font-family:var(--mono);font-size:10px;color:var(--ink-dim);padding-bottom:2px}
+.cell{aspect-ratio:1;border-radius:7px;background:var(--surface);border:1px solid var(--line);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:11px;color:var(--ink-dim);position:relative}
+.cell.empty{background:transparent;border-color:transparent}
+.cell.today{outline:2px solid var(--ink);outline-offset:-1px}
+.cell .dot{width:5px;height:5px;border-radius:99px;margin-top:2px}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:11px;font-size:11.5px;color:var(--ink-dim)}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+
+/* 통계 */
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:13px}
+.stat .k{font-size:12px;color:var(--ink-dim)}
+.stat .v{font-family:var(--mono);font-size:23px;font-weight:700;margin-top:4px;line-height:1}
+.stat .v small{font-size:12px;color:var(--ink-dim);font-weight:400}
+
+/* 운동 카드 (기존) */
+.circuit{background:linear-gradient(160deg,var(--surface-2),var(--surface));
+  border:1px solid var(--line);border-radius:13px;padding:16px}
+.circuit h3{margin:0 0 4px;font-size:15.5px;font-weight:700}
+.circuit p{margin:0;font-size:13px;color:var(--ink-dim)}
+.yt{display:inline-flex;align-items:center;gap:6px;margin-top:11px;padding:8px 13px;border-radius:8px;
+  background:var(--surface-2);border:1px solid var(--line);color:var(--ink);text-decoration:none;
+  font-size:12.5px;font-weight:600}
+.ex{background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:15px 15px 13px;margin-bottom:11px}
+.ex-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.ex-name{font-size:16px;font-weight:700;letter-spacing:-.01em;margin:0}
+.ex-en{font-family:var(--mono);font-size:10.5px;color:var(--ink-dim);margin-top:2px;letter-spacing:.02em}
+.spec{font-family:var(--mono);font-size:12px;text-align:right;white-space:nowrap;line-height:1.5}
+.spec b{color:var(--accent);font-size:15px;font-weight:700}
+.cues{margin:11px 0 0;padding:0;list-style:none}
+.cues li{position:relative;padding-left:15px;font-size:13.5px;color:var(--ink-dim);margin-bottom:4px}
+.cues li::before{content:"";position:absolute;left:0;top:9px;width:5px;height:5px;border-radius:2px;background:var(--accent);opacity:.75}
+.cues li b{color:var(--ink);font-weight:600}
+.warn{margin-top:10px;padding:9px 11px;border-radius:8px;background:rgba(224,96,76,.09);
+  border:1px solid rgba(224,96,76,.28);font-size:12.5px;color:#F0A79A}
+.warn b{color:var(--stop)}
+.sets{display:flex;gap:7px;margin-top:12px;flex-wrap:wrap;align-items:center}
+.sets .lab{font-family:var(--mono);font-size:10.5px;color:var(--ink-dim);margin-right:2px}
+.set{appearance:none;border:1px solid var(--line);background:transparent;color:var(--ink-dim);
+  border-radius:8px;min-width:62px;padding:9px 10px;font-family:var(--mono);font-size:12px;
+  cursor:pointer;transition:.15s;font-weight:600}
+.set[data-on="1"]{background:var(--accent);border-color:var(--accent);color:#14181B}
+.set.extra{border-style:dashed}
+.limits{display:grid;gap:8px}
+.limit{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--stop);
+  border-radius:10px;padding:11px 13px;font-size:13.5px}
+.limit b{display:block;font-size:13px;margin-bottom:2px}
+.limit span{color:var(--ink-dim)}
+.stopbox{background:rgba(224,96,76,.08);border:1px solid rgba(224,96,76,.3);border-radius:13px;padding:15px}
+.stopbox h3{margin:0 0 8px;font-size:15px;color:var(--stop)}
+.stopbox ul{margin:0;padding-left:18px;font-size:13.5px;color:var(--ink-dim)}
+.stopbox li{margin-bottom:3px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--surface);
+  border:1px solid var(--line);border-radius:11px;overflow:hidden}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line)}
+th{font-size:11px;font-family:var(--mono);letter-spacing:.08em;color:var(--ink-dim);
+  text-transform:uppercase;background:var(--surface-2)}
+tr:last-child td{border-bottom:none}
+td.num{font-family:var(--mono);color:var(--accent);font-weight:600;white-space:nowrap}
+.tools{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.tools button{appearance:none;background:var(--surface);border:1px solid var(--line);color:var(--ink-dim);
+  border-radius:8px;font-family:inherit;font-size:12px;padding:9px 13px;cursor:pointer}
+footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
+  font-size:12px;color:var(--ink-dim);line-height:1.7}
+[hidden]{display:none !important}
+@media (prefers-reduced-motion:reduce){*{transition:none !important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">Shower Anchor Protocol</div>
+  <h1>농장 출입 루틴</h1>
+  <p class="sub">기신 대표님 · 2026년 9월 1일 시작 · 기준 93.7kg</p>
+</header>
+
+<nav>
+  <div class="tabs main" role="tablist">
+    <button class="tab" role="tab" aria-selected="true"  data-main="today">오늘</button>
+    <button class="tab" role="tab" aria-selected="false" data-main="routine">루틴</button>
+    <button class="tab" role="tab" aria-selected="false" data-main="record">기록</button>
+  </div>
+  <div class="tabs sub" id="subTabs" hidden>
+    <button class="tab sm" data-day="upper" aria-selected="true">상체<small>월 수 금</small></button>
+    <button class="tab sm" data-day="lower" aria-selected="false">하체<small>화 목 토</small></button>
+    <button class="tab sm" data-day="sun"   aria-selected="false">고강도<small>일 · 선택</small></button>
+  </div>
+</nav>
+
+<!-- ═══════════ 오늘 ═══════════ -->
+<div id="main-today">
+  <section>
+    <div class="card grad">
+      <div class="today-top">
+        <div class="ring">
+          <svg width="92" height="92" viewBox="0 0 92 92">
+            <circle cx="46" cy="46" r="40" fill="none" stroke="#242B31" stroke-width="8"/>
+            <circle id="ringArc" cx="46" cy="46" r="40" fill="none" stroke="var(--accent)"
+                    stroke-width="8" stroke-linecap="round" stroke-dasharray="251.3" stroke-dashoffset="251.3"
+                    style="transition:stroke-dashoffset .4s ease"/>
+          </svg>
+          <div class="val"><b id="ringPct">0%</b><small id="ringFrac">0 / 4</small></div>
+        </div>
+        <div class="today-meta">
+          <div class="d" id="todayDate">—</div>
+          <div class="w" id="todayWeek">—</div>
+          <div class="plan" id="todayPlan">—</div>
+        </div>
+      </div>
+
+      <div class="warn" id="restBanner" hidden style="margin-top:12px;background:rgba(138,168,200,.1);border-color:rgba(138,168,200,.3);color:#B9CDE0">
+        <b style="color:var(--sun)">오늘은 휴식으로 선언했다.</b> 운동은 건너뛴다. 물과 무음주는 그대로.
+      </div>
+
+      <div class="checks">
+        <button class="chk" data-key="circuit">
+          <span class="box">✓</span>
+          <span class="txt"><b>서킷 20분</b><small>저충격 전신 · 샤워 전</small></span>
+        </button>
+        <button class="chk" data-key="dumbbell">
+          <span class="box">✓</span>
+          <span class="txt"><b id="dbLabel">덤벨 세션</b><small id="dbSub">12회 × 2세트</small></span>
+        </button>
+        <button class="chk" data-key="round">
+          <span class="box">✓</span>
+          <span class="txt"><b>라운딩</b><small>18홀 · 보너스 +1</small></span>
+        </button>
+        <button class="chk" data-key="range">
+          <span class="box">✓</span>
+          <span class="txt"><b>골프연습</b><small>연습장 1.5시간 · 보너스 +1</small></span>
+        </button>
+        <button class="chk drink" data-key="drink">
+          <span class="box">✓</span>
+          <span class="txt"><b>오늘 음주함</b><small id="drinkSub">링에서 제외 · 체크 시 링이 붉게 표시된다</small></span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>물</h2><span>250ml × 12</span></div>
+    <div class="card">
+      <div class="water-head">
+        <div style="font-size:13px;color:var(--ink-dim)">한 잔 = 250ml</div>
+        <div class="amt" id="waterAmt">0 / 3,000ml</div>
+      </div>
+      <div class="glasses" id="glasses"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>영양제</h2><span>SUPPLEMENTS</span></div>
+    <div class="card">
+      <div class="supp-head">
+        <div style="font-size:13px;color:var(--ink-dim)">탭하면 체크됩니다</div>
+        <div class="cnt" id="suppCnt">0 / 0</div>
+      </div>
+      <div id="suppBox"></div>
+      <div class="warn" style="margin-top:12px">
+        <b>기상 공복엔 물만.</b> 유산균·밀크시슬·CLA는 전부 첫 식사 시점으로 옮겼다.
+        빈속에 먹으면 유산균은 위산에 죽고, CLA는 흡수가 안 되면서 속만 쓰리다.<br><br>
+        <b>CLA는 하루 2정.</b> 일반식 뒤에만 먹는다. 랩노쉬는 지방이 거의 없어 흡수가 안 되니 건너뛴다.
+        저녁이 랩노쉬뿐인 날은 점심 후 1정으로 끝낸다.
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>오늘 마무리</h2><span>INTAKE</span></div>
+    <div class="card">
+      <div class="inrow">
+        <div class="infield">
+          <label>섭취 칼로리</label>
+          <input type="number" id="inKcal" inputmode="numeric" placeholder="0">
+        </div>
+        <div class="infield">
+          <label>단백질 g</label>
+          <input type="number" id="inProt" inputmode="numeric" placeholder="0">
+        </div>
+      </div>
+      <div class="burn">
+        <div class="burn-head">
+          <span class="t">오늘 소모</span>
+          <span class="n" id="burnTotal">—</span>
+        </div>
+        <div class="blist" id="burnList"></div>
+        <div id="burnBadge"></div>
+      </div>
+
+      <div class="readout">
+        <div class="ro" id="roBalBox"><span class="k">수지</span><span class="v" id="roBal">—</span></div>
+        <div class="ro" id="roProtBox"><span class="k">단백질 <span style="color:var(--ink-dim);font-size:11px">/ 150g</span></span><span class="v" id="roProt">—</span></div>
+      </div>
+      <div class="warn" id="deficitWarn" hidden></div>
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
+        <div style="font-size:13px;color:var(--ink-dim);margin-bottom:8px">주간 체성분 (월요일 아침 공복)</div>
+        <div class="inrow" id="compInputs">
+          <div class="infield">
+            <label>체중 kg</label>
+            <input type="number" id="inWeight" step="0.1" inputmode="decimal" placeholder="—">
+          </div>
+          <div class="infield">
+            <label>체지방 kg</label>
+            <input type="number" id="inFat" step="0.1" inputmode="decimal" placeholder="—">
+          </div>
+        </div>
+        <button class="pill" type="button" id="saveWeight" style="margin-top:9px;padding:11px 18px;width:100%">저장</button>
+        <div style="font-family:var(--mono);font-size:11.5px;color:var(--ink-dim);margin-top:9px;line-height:1.6" id="weightNote">—</div>
+        <button class="pill" type="button" id="editWeight" hidden style="margin-top:9px;padding:9px 16px">수정</button>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>이번 주 · 이번 달</h2><span>LIMITS</span></div>
+    <div class="counters">
+      <div class="ctr" id="ctrWeek"><div class="k">이번 주 음주</div><div class="v"><span id="wkDrink">0</span><small> / 2</small></div></div>
+      <div class="ctr" id="ctrMonth"><div class="k">이번 달 음주</div><div class="v"><span id="moDrink">0</span><small> / 5</small></div></div>
+      <div class="ctr"><div class="k">연속 실행</div><div class="v"><span id="streak">0</span><small> 일</small></div></div>
+      <div class="ctr"><div class="k">최장 연속</div><div class="v"><span id="best">0</span><small> 일</small></div></div>
+    </div>
+    <div class="warn" id="carryWarn" hidden></div>
+    <div class="card" style="margin-top:12px">
+      <div style="font-size:13px;color:var(--ink-dim);margin-bottom:9px">
+        오늘 조정 · 이번 주 휴식 <b id="restWeek" style="color:var(--ink)">0</b>회
+      </div>
+      <div class="pills">
+        <button class="pill" type="button" id="restToggle" data-on="0">오늘 휴식</button>
+        <button class="pill" type="button" id="partSwap">부위 바꾸기</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ═══════════ 루틴 ═══════════ -->
+<div id="main-routine" hidden>
+<div id="panel-upper">
+
+  <section>
+    <div class="sec-head"><h2>1단계 · 서킷</h2><span>20 MIN</span></div>
+    <div class="circuit">
+      <h3>저충격 전신 서킷 20분</h3>
+      <p>4분 × 5블록. 점프 없음, 바닥 동작 없음. 강도는 Zone 2 — 20초 끝에 짧은 문장을 말할 수 있으면 맞다.</p>
+      <a class="yt" href="https://www.youtube.com/results?search_query=20+MIN+HIIT+WORKOUT+Beginner+Friendly+Full+Body+Fat+Burn" target="_blank" rel="noopener">▶ 유튜브에서 열기</a>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>2단계 · 덤벨 상체</h2><span>12회 × 2세트</span></div>
+
+    <article class="ex">
+      <div class="ex-top">
+        <div><p class="ex-name">덤벨 컬</p><div class="ex-en">DUMBBELL CURL</div></div>
+        <div class="spec"><b>5kg</b> ×2<br>12회</div>
+      </div>
+      <ul class="cues">
+        <li><b>팔꿈치를 옆구리에 고정</b>한다. 앞뒤로 흔들리면 이두가 아니라 어깨가 든다.</li>
+        <li>내릴 때 2초, 천천히. 여기서 자극의 절반이 나온다.</li>
+        <li>5kg이 무거우면 3kg으로 내린다. 반동은 쓰지 않는다.</li>
+      </ul>
+      <div class="sets" data-sets="3" data-extra="1"></div>
+    </article>
+
+    <article class="ex">
+      <div class="ex-top">
+        <div><p class="ex-name">해머 컬</p><div class="ex-en">HAMMER CURL</div></div>
+        <div class="spec"><b>5kg</b> ×2<br>12회</div>
+      </div>
+      <ul class="cues">
+        <li>손등이 바깥을 보게 <b>세로로 잡는다.</b> 손목이 중립이라 왼손목에 유리하다.</li>
+        <li>팔뚝(전완)까지 같이 쓴다. 골프 그립 힘에 직결된다.</li>
+      </ul>
+      <div class="sets" data-sets="3" data-extra="1"></div>
+    </article>
+
+    <article class="ex">
+      <div class="ex-top">
+        <div><p class="ex-name">덤벨 로우</p><div class="ex-en">DUMBBELL ROW</div></div>
+        <div class="spec"><b>5kg</b> ×2<br>12회</div>
+      </div>
+      <ul class="cues">
+        <li>무릎 살짝 굽히고 상체 45도. 허리는 편 상태를 유지한다.</li>
+        <li><b>팔로 당기지 말고 견갑골을 뒤로 모은다.</b> 등이 주인공이다.</li>
+        <li>팔꿈치는 몸통을 스치듯 뒤로. 벌어지면 어깨가 개입한다.</li>
+      </ul>
+      <div class="warn"><b>왼쪽 어깨:</b> 당길 때 으쓱하는 느낌이 나면 중량을 3kg으로 내린다.</div>
+      <div class="sets" data-sets="3" data-extra="1"></div>
+    </article>
+
+    <article class="ex">
+      <div class="ex-top">
+        <div><p class="ex-name">벤트오버 리버스 플라이</p><div class="ex-en">BENT-OVER REVERSE FLY</div></div>
+        <div class="spec"><b>3kg</b> ×2<br>12회</div>
+      </div>
+      <ul class="cues">
+        <li>허리 굽힌 자세에서 팔을 <b>수평 ↔ 배꼽</b>으로. 지금 하시던 그 동작이다.</li>
+        <li>팔꿈치를 아주 살짝만 굽히고 고정. 팔로 젓지 않는다.</li>
+        <li><b>회전근개를 지켜주는 동작.</b> 5종 중 왼쪽 어깨에 가장 유익하다. 중량 올리지 말 것.</li>
+      </ul>
+      <div class="sets" data-sets="3" data-extra="1"></div>
+    </article>
+
+    <article class="ex">
+      <div class="ex-top">
+        <div><p class="ex-name">스밴드 프레스</p><div class="ex-en">SVEND PRESS</div></div>
+        <div class="spec"><b>3kg</b> ×2<br>12회</div>
+      </div>
+      <ul class="cues">
+        <li>덤벨 2개를 가슴 앞에서 <b>서로 맞대고 꽉 눌러 붙인 채</b> 앞으로 뻗었다 당긴다.</li>
+        <li>미는 힘을 끝까지 유지한다. 힘이 풀리면 가슴이 안 쓰인다.</li>
+        <li>어깨를 위로 들지 않는다. 팔은 가슴 높이 안에서만 움직인다.</li>
+      </ul>
+      <div class="sets" data-sets="3" data-extra="1"></div>
+    </article>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>좌우 보정</h2><span>ASYMMETRY</span></div>
+    <div class="circuit">
+      <p>왼팔 근육량이 오른쪽보다 적다. 점선 테두리의 <b style="color:var(--accent)">L+</b> 세트는
+      <b style="color:var(--ink)">왼팔만 추가로 한 세트</b> 더 하는 칸이다. 오른팔은 쉰다.</p>
+    </div>
+  </section>
+</div>
+
+<!-- ══════════ 하체일 ══════════ -->
+<div id="panel-lower" hidden>
+
+  <section>
+    <div class="sec-head"><h2>1단계 · 서킷</h2><span>20 MIN</span></div>
+    <div class="circuit">
+      <h3>저충격 전신 서킷 20분</h3>
+      <p>상체일과 동일. 덤벨 하체 전에 하면 워밍업 역할도 한다.</p>
+      <a class="yt" href="https://www.youtube.com/results?search_query=20+MIN+HIIT+WORKOUT+Beginner+Friendly+Full+Body+Fat+Burn" target="_blank" rel="noopener">▶ 유튜브에서 열기</a>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>2단계 · 덤벨 하체</h2><span>12회 × 2세트</span></div>
+
+    <article class="ex">
+      <div class="ex-top">
+        <div><p class="ex-name">루마니안 데드리프트</p><div class="ex-en">ROMANIAN DEADLIFT</div></div>
+        <div class="spec"><b>10kg</b> ×2<br>12회</div>
+      </div>
+      <ul class="cues">
+        <li>무릎은 거의 고정. <b>엉덩이를 뒤로 밀면서</b> 상체를 내린다. 쪼그려 앉는 게 아니다.</li>
+        <li>덤벨은 허벅지를 스치며 내려간다. 몸에서 멀어지면 허리가 받는다.</li>
+        <li>햄스트링이 당기는 지점에서 멈춘다. 바닥까지 갈 필요 없다.</li>
+        <li>올라올 때 <b>엉덩이를 꽉 조인다.</b> 오른쪽 둔근이 약하니 여기에 집중.</li>
+      </ul>
+      <div class="warn"><b>왼쪽 어깨:</b> 팔이 늘어진 자세라 견인 부하가 걸린다. 어깨를 으쓱 올리지 말고 <b>견갑골을 아래로 고정</b>한 채 유지한다. 저릿하면 즉시 중단.</div>
+      <div class="sets" data-sets="2"></div>
+    </article>
+
+    <article class="ex">
+      <div class="ex-top">
+        <div><p class="ex-name">리버스 런지</p><div class="ex-en">REVERSE LUNGE</div></div>
+        <div class="spec"><b>5kg</b> ×2<br>좌우 12회</div>
+      </div>
+      <ul class="cues">
+        <li>뒤로 내딛는다. 앞으로 나가는 런지보다 무릎 부담이 훨씬 적다.</li>
+        <li>앞무릎이 <b>발끝 방향과 같은 쪽</b>을 향하게 한다. 안으로 무너지면 멈춘다.</li>
+        <li>오른발이 앞일 때 특히 천천히. 오른쪽 고관절 내회전이 15°라 보폭을 짧게 잡는다.</li>
+        <li>흔들리면 벽이나 문틀에 <b>오른손</b>을 짚는다. 왼손목은 짚지 않는다.</li>
+      </ul>
+      <div class="warn"><b>발 각질종:</b> 앞발 딛는 순간 통증이 오면 그날 중단하고 걷기로 대체한다.</div>
+      <div class="sets" data-sets="2"></div>
+    </article>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>왜 하체가 핵심인가</h2><span>WHY</span></div>
+    <div class="circuit">
+      <p>근육량 방어의 대부분이 이 두 동작에서 나온다. 상체 5종을 다 빼먹어도 이건 지킨다.
+      인체 근육의 60%가 하체에 있고, 지금 목표는 체중이 아니라 <b style="color:var(--ink)">근육을 지키면서 지방을 줄이는 것</b>이다.</p>
+    </div>
+  </section>
+</div>
+
+<!-- ══════════ 일요일 ══════════ -->
+<div id="panel-sun" hidden>
+  <section>
+    <div class="sec-head"><h2>고강도 타바타</h2><span>선택 · 주 1회</span></div>
+    <div class="circuit">
+      <h3>20 MIN TABATA — 1000 CALORIE CHALLENGE</h3>
+      <p>20초 / 10초 × 8라운드 × 5세트. 최대심박 80~90% 구간. 실제 소모는 300~400kcal이지
+      1,000kcal이 아니다. 제목은 마케팅이다.</p>
+      <a class="yt" href="https://youtu.be/zVObPshjwr8" target="_blank" rel="noopener">▶ 유튜브에서 열기</a>
+    </div>
+
+    <div class="warn" style="margin-top:12px;font-size:13.5px">
+      <b>이 영상은 점프 동작이 있다.</b> 94kg에서 점프 착지는 무릎·발목에 체중의 3~5배가 걸린다.
+      아래 대체 동작으로 바꿔서 한다.
+    </div>
+
+    <table style="margin-top:12px">
+      <tr><th>원 동작</th><th>대체</th></tr>
+      <tr><td>점핑잭</td><td class="num">스텝 아웃 잭</td></tr>
+      <tr><td>버피</td><td class="num">스탠딩 니업</td></tr>
+      <tr><td>스쿼트 점프</td><td class="num">빠른 하프 스쿼트</td></tr>
+      <tr><td>마운틴 클라이머</td><td class="num">서서 하이니</td></tr>
+    </table>
+
+    <div class="warn" style="margin-top:12px">
+      <b>버피는 하지 않는다.</b> 바닥에 손을 짚어야 하는데 왼손목은 회내가 안 되고 연골 손상이 있다.
+      예외 없음.
+    </div>
+
+    <div class="stopbox" style="margin-top:14px">
+      <h3>주 1회를 넘기지 않는다</h3>
+      <ul>
+        <li>덤벨 루틴이 있는 날에는 하지 않는다</li>
+        <li>라운딩 전날에는 하지 않는다</li>
+        <li>발 각질종 통증이 남아 있으면 건너뛴다</li>
+      </ul>
+    </div>
+  </section>
+</div>
+<!-- ═══════════ 공통 ═══════════ -->
+<section>
+  <div class="sec-head"><h2>즉시 중단 신호</h2><span>STOP</span></div>
+  <div class="stopbox">
+    <h3>하나라도 나오면 그날은 끝</h3>
+    <ul>
+      <li>왼쪽 어깨에서 딸깍이는 소리, 또는 팔을 들 때 걸리는 느낌</li>
+      <li>왼쪽 손목에 체중이 실리거나 꺾이는 자세</li>
+      <li>무릎이 안쪽으로 무너지는 순간</li>
+      <li>어지럼증, 식은땀, 심장이 불규칙하게 뛰는 느낌</li>
+      <li>발바닥 각질종 부위의 찌르는 통증</li>
+      <li>다음 날까지 남는 관절 통증 — 근육통은 정상, 관절통은 아니다</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><h2>제약 조건</h2><span>CONSTRAINTS</span></div>
+  <div class="limits">
+    <div class="limit"><b>왼쪽 어깨 · 회전근개</b><span>쇄골 골절 후유증. 어깨가 직접 관여하는 동작은 3kg 상한. 오버헤드·프론트 레이즈는 하지 않는다.</span></div>
+    <div class="limit"><b>왼쪽 손목 · 연골 손상</b><span>회내 불가, 굴곡 제한. 바닥 지지·푸쉬업·플랭크 전면 제외.</span></div>
+    <div class="limit"><b>오른쪽 고관절 · 내회전 15°</b><span>정상 45°. 하체 동작에서 보폭을 짧게, 회전 부하를 피한다.</span></div>
+    <div class="limit"><b>오른쪽 둔근 약화 · 단일다리 균형 열위</b><span>리버스 런지에서 오른발 지지 시 특히 천천히.</span></div>
+    <div class="limit"><b>왼팔 근육량 열위</b><span>상체 동작마다 왼팔 1세트 추가.</span></div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><h2>생활 규칙</h2><span>DAILY</span></div>
+  <table>
+    <tr><th>항목</th><th>기준</th></tr>
+    <tr><td>공복</td><td class="num">마지막 식사 + 14시간 이상</td></tr>
+    <tr><td>단백질</td><td class="num">하루 150g</td></tr>
+    <tr><td>랩노쉬 맥스</td><td class="num">하루 1~2병 (상한)</td></tr>
+    <tr><td>물</td><td class="num">250ml × 12잔</td></tr>
+    <tr><td>음주</td><td class="num">주 2회 · 월 5회 상한</td></tr>
+    <tr><td>휴식</td><td class="num">주 1회 목표 · 날짜는 직접 선언</td></tr>
+    <tr><td>골프연습</td><td class="num">주 2회 · 1.5시간</td></tr>
+    <tr><td>식후 걷기</td><td class="num">40분</td></tr>
+    <tr><td>공복 체중</td><td class="num">월요일 아침 · 동일 조건</td></tr>
+  </table>
+  <div class="warn" style="margin-top:11px">
+    회식이 있는 날은 <b>출발 전 랩노쉬 1병.</b> 늦게 끝났으면 +14시간으로 복구하되,
+    <b>첫 식사는 14시를 넘기지 않는다.</b>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><h2>영양제</h2><span>SUPPLEMENTS</span></div>
+  <table>
+    <tr><th>시점</th><th>내용</th></tr>
+    <tr><td>기상 공복</td><td class="num">물 500ml</td></tr>
+    <tr><td>첫 식사 직전</td><td class="num">유산균</td></tr>
+    <tr><td>첫 식사 후</td><td class="num">밀크시슬 · 아마칼디 · 비타민C · 피크노제놀 · 크레아틴 · CLA</td></tr>
+    <tr><td>두 번째 식사 후</td><td class="num">오메가3 · 비타민B · MSM · 마데카솔 · 크레아틴 · CLA</td></tr>
+    <tr><td>취침 전</td><td class="num">잔티젠</td></tr>
+  </table>
+  <div class="warn" style="margin-top:11px">
+    CLA는 <b>기름 캡슐이라 일반식 뒤에만 먹는다.</b> 하루 2정, 랩노쉬 끼니는 건너뛴다.
+    공복혈당 107 상태이므로 다음 검진에서 <b>공복혈당 · 당화혈색소 · 간수치</b>를 확인한다.
+  </div>
+</section>
+
+</div>
+
+<!-- ═══════════ 기록 ═══════════ -->
+<div id="main-record" hidden>
+  <section>
+    <div class="sec-head"><h2>이번 주</h2><span id="wkRange">—</span></div>
+    <div class="stats">
+      <div class="stat"><div class="k">실행률</div><div class="v"><span id="wEx">0</span><small>%</small></div></div>
+      <div class="stat"><div class="k">수지 누계</div><div class="v" id="wBalBox"><span id="wBal">—</span><small> kcal</small></div></div>
+      <div class="stat"><div class="k">음주</div><div class="v"><span id="wDrinkN">0</span><small> / 2</small></div></div>
+      <div class="stat"><div class="k">단백질 평균</div><div class="v"><span id="wProt">—</span><small> g</small></div></div>
+    </div>
+    <div class="stats" style="margin-top:9px">
+      <div class="stat"><div class="k">활동 소모 누계</div><div class="v"><span id="wBurn">0</span><small> kcal</small></div></div>
+      <div class="stat"><div class="k">활동 횟수</div><div class="v"><span id="wActs">0</span><small> 개</small></div></div>
+    </div>
+    <table style="margin-top:9px">
+      <thead><tr><th>활동</th><th>이번 주</th><th>소모</th></tr></thead>
+      <tbody id="wActBody"></tbody>
+    </table>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>이번 달</h2><span id="statMonth">—</span></div>
+    <div class="stats">
+      <div class="stat"><div class="k">실행률</div><div class="v"><span id="sEx">0</span><small>%</small></div></div>
+      <div class="stat"><div class="k">수지 누계</div><div class="v" id="mBalBox"><span id="mBal">—</span><small> kcal</small></div></div>
+      <div class="stat"><div class="k">음주</div><div class="v"><span id="mDrinkN">0</span><small> / 5</small></div></div>
+      <div class="stat"><div class="k">물 3L 달성</div><div class="v"><span id="sWater">0</span><small>%</small></div></div>
+    </div>
+    <div class="stats" style="margin-top:9px">
+      <div class="stat"><div class="k">무음주일</div><div class="v"><span id="sSober">0</span><small>%</small></div></div>
+      <div class="stat"><div class="k">라운딩 · 연습</div><div class="v"><span id="sRound">0</span><small> / </small><span id="sRange">0</span><small> 회</small></div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="cal-nav">
+      <button id="prevM" aria-label="이전 달">‹</button>
+      <div class="m" id="calMonth">—</div>
+      <button id="nextM" aria-label="다음 달">›</button>
+    </div>
+    <div class="cal" id="calGrid"></div>
+    <div class="legend">
+      <span><i style="background:var(--ok)"></i>전부 달성</span>
+      <span><i style="background:var(--upper)"></i>일부 달성</span>
+      <span><i style="background:var(--stop)"></i>음주</span>
+      <span><i style="background:var(--sun)"></i>휴식일</span>
+      <span><i style="background:var(--line)"></i>기록 없음</span>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>최근 7일 평균</h2><span>INTAKE</span></div>
+    <div class="stats">
+      <div class="stat"><div class="k">섭취</div><div class="v"><span id="aKcal">—</span><small> kcal</small></div></div>
+      <div class="stat"><div class="k">수지</div><div class="v"><span id="aBal">—</span><small> kcal</small></div></div>
+      <div class="stat"><div class="k">단백질</div><div class="v"><span id="aProt">—</span><small> g</small></div></div>
+      <div class="stat"><div class="k">기록일</div><div class="v"><span id="aDays">0</span><small> / 7</small></div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>월별 누적</h2><span>HISTORY</span></div>
+    <table>
+      <thead><tr><th>월</th><th>운동</th><th>수지</th><th>물</th><th>음주</th></tr></thead>
+      <tbody id="histBody"><tr><td colspan="5" style="color:var(--ink-dim)">아직 기록이 없습니다.</td></tr></tbody>
+    </table>
+    <div class="tools">
+      <button id="exportBtn">기록 내보내기 (JSON)</button>
+      <button id="importBtn">기록 불러오기</button>
+      <button id="wipeBtn" style="color:var(--stop);border-color:rgba(224,96,76,.4)">전체 삭제</button>
+    </div>
+    <input type="file" id="fileInput" accept="application/json" hidden>
+  </section>
+</div>
+
+<footer>
+  기준 체중 93.7kg (2026-08-17 월요일 공복) · 다음 기준점 2026-09-01(월)<br>
+  기록은 이 브라우저에만 저장된다. 기기를 바꾸기 전에 <b>기록 내보내기</b>로 백업할 것.<br>
+  2주 실행 후 9월 15일 재측정.
+</footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var KEY = 'shower_anchor_v1';
+  var DOW = ['일','월','화','수','목','금','토'];
+  var SUPP_TOTAL = 15;   // 영양제 항목 총 개수 (SUPP 정의와 일치)
+  var CAL_DOW = ['월','화','수','목','금','토','일'];
+  // 요일별 덤벨 배정: 0=일 휴식, 1/3/5=상체, 2/4/6=하체
+  // 요일 고정 없음. 마지막으로 수행한 덤벨 세션의 반대가 다음 차례가 된다.
+  function isRest(dt){ var d = db.days[key(dt)]; return !!(d && d.rest); }
+
+  // 오늘 해야 할 덤벨 부위: 오늘 직접 지정했으면 그것, 아니면 마지막 수행분의 반대
+  function nextPart(dt){
+    var d = db.days[key(dt)];
+    if(d && d.part) return d.part;
+    var c = new Date(dt); c.setHours(0,0,0,0);
+    for(var i=0;i<120;i++){
+      c.setDate(c.getDate()-1);
+      var r = db.days[key(c)];
+      if(r && r.dumbbell && r.part) return r.part === 'upper' ? 'lower' : 'upper';
+    }
+    return 'upper'; // 기록이 없으면 상체부터
+  }
+
+  // 이번 주(일~토) 휴식 선언 횟수
+  function restCountThisWeek(now){
+    var s0 = startOfWeek(now), n = 0, c = new Date(s0);
+    for(var i=0;i<7;i++){
+      var r = db.days[key(c)];
+      if(r && r.rest) n++;
+      c.setDate(c.getDate()+1);
+    }
+    return n;
+  }
+
+  var db = load();
+  var calCursor = new Date();
+  var mainTab = 'today', routineTab = 'upper';
+
+  function load(){
+    var o;
+    try { var r = localStorage.getItem(KEY); o = r ? JSON.parse(r) : {}; }
+    catch(e){ o = {}; }
+    if(!o || typeof o !== 'object') o = {};
+    if(!o.days) o.days = {};
+    if(!o.settings) o.settings = {};
+    if(!o.weights) o.weights = {};
+    return o;
+  }
+  function save(){
+    try { localStorage.setItem(KEY, JSON.stringify(db)); }
+    catch(e){ /* 저장 실패 시 조용히 넘어간다 — 화면 기록은 유지된다 */ }
+  }
+  function key(d){
+    return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
+  }
+  function pad(n){ return n < 10 ? '0'+n : ''+n; }
+  function day(k){
+    if(!db.days[k]) db.days[k] = {circuit:false, dumbbell:false, round:false, range:false, drink:false, water:0, supp:{}, rest:false, part:null, kcal:null, prot:null};
+    return db.days[k];
+  }
+  function has(k){ return Object.prototype.hasOwnProperty.call(db.days, k); }
+
+  // 그날의 목표 항목 수와 달성 수
+  // 기본 항목: 서킷 · 덤벨 · 물 · 영양제 (휴식일은 서킷·덤벨 제외)
+  // 골프연습/라운딩은 보너스(+). 음주는 감점 표시(링 계산엔 미포함).
+  function score(k, dateObj){
+    var d = db.days[k];
+    if(!d) return {done:0, total:0, bonus:0, drink:false, rest:false};
+    var rest = !!d.rest;
+    var total = 2, done = 0, bonus = 0;   // 물 + 영양제는 휴식일에도 유지
+    if(d.water >= 12) done++;
+    if(suppDone(d)) done++;
+    if(!rest){
+      total += 2;                          // 서킷 + 덤벨
+      if(d.circuit || d.round || d.range) done++;   // 골프만 해도 서킷 충족
+      if(d.dumbbell) done++;
+    }
+    if(d.round) bonus++;
+    if(d.range) bonus++;
+    return {done:done, total:total, bonus:bonus, drink:!!d.drink, rest:rest};
+  }
+  function suppDone(d){
+    if(!d || !d.supp) return false;
+    var n = 0;
+    Object.keys(d.supp).forEach(function(x){ if(d.supp[x]) n++; });
+    return n >= SUPP_TOTAL;
+  }
+
+  /* ── 오늘 화면 ── */
+  var glassBox = document.getElementById('glasses');
+  for (var i=0; i<12; i++){
+    var g = document.createElement('button');
+    g.className = 'glass'; g.type='button'; g.dataset.on='0'; g.dataset.idx = i;
+    g.textContent = (i+1);
+    g.addEventListener('click', function(){
+      var k = key(new Date()), d = day(k);
+      var idx = parseInt(this.dataset.idx,10);
+      d.water = (d.water === idx+1) ? idx : idx+1;
+      save(); renderToday();
+    });
+    glassBox.appendChild(g);
+  }
+
+  document.querySelectorAll('.chk').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if(this.classList.contains('locked')) return;
+      var k = key(new Date()), d = day(k), f = this.dataset.key;
+      d[f] = !d[f];
+      if(f === 'dumbbell') d.part = d.dumbbell ? nextPart(new Date()) : null;
+      save(); renderToday(); renderRecord();
+    });
+  });
+
+  /* ── 영양제 ── */
+  var SUPP = [
+    {t:'기상 공복', items:[['w','물 500ml']]},
+    {t:'첫 식사 직전', items:[['pb','유산균']]},
+    {t:'첫 식사 후', items:[['ms','밀크시슬'],['ca','아마칼디'],['vc','비타민C'],
+                          ['pyc','피크노제놀'],['cr1','크레아틴'],['cla1','CLA']]},
+    {t:'두 번째 식사 후', items:[['o3','오메가3'],['vb','비타민B'],['msm','MSM'],
+                              ['md','마데카솔'],['cr2','크레아틴'],['cla2','CLA']]},
+    {t:'취침 전', items:[['xg','잔티젠']]}
+  ];
+
+  (function buildSupp(){
+    var box = document.getElementById('suppBox');
+    SUPP.forEach(function(g){
+      var wrap = document.createElement('div'); wrap.className = 'supp-grp';
+      var h = document.createElement('h4'); h.textContent = g.t; wrap.appendChild(h);
+      var row = document.createElement('div'); row.className = 'pills';
+      g.items.forEach(function(it){
+        var b = document.createElement('button');
+        b.className = 'pill'; b.type = 'button';
+        b.dataset.sid = it[0]; b.dataset.on = '0'; b.textContent = it[1];
+        b.setAttribute('aria-pressed','false');
+        b.addEventListener('click', function(){
+          var d = day(key(new Date()));
+          if(!d.supp) d.supp = {};
+          d.supp[this.dataset.sid] = !d.supp[this.dataset.sid];
+          save(); renderToday();
+        });
+        row.appendChild(b);
+      });
+      wrap.appendChild(row); box.appendChild(wrap);
+    });
+  })();
+
+  function renderSupp(){
+    var d = day(key(new Date()));
+    if(!d.supp) d.supp = {};
+    var n = 0;
+    document.querySelectorAll('#suppBox .pill').forEach(function(b){
+      var on = !!d.supp[b.dataset.sid];
+      b.dataset.on = on ? '1' : '0';
+      b.setAttribute('aria-pressed', on);
+      if(on) n++;
+    });
+    var cntEl = document.getElementById('suppCnt');
+    cntEl.textContent = n + ' / ' + SUPP_TOTAL;
+    cntEl.style.color = (n >= SUPP_TOTAL) ? 'var(--ok)' : 'var(--accent)';
+    if(typeof renderRing === 'function') renderRing();
+  }
+
+  /* ── 대사량 계산 ── */
+  var PROT_TARGET = 150;
+  var compEditing = false;
+
+  // 해당 시점 이전의 가장 최근 체성분 기록 {w, f}
+  function comp(dt){
+    var best = null, bestK = null, first = null, firstK = null, kk = key(dt);
+    Object.keys(db.weights || {}).forEach(function(k){
+      if(k <= kk && (bestK === null || k > bestK)){ bestK = k; best = db.weights[k]; }
+      if(firstK === null || k < firstK){ firstK = k; first = db.weights[k]; }
+    });
+    // 해당 날짜 이전 기록이 없으면 가장 이른 측정값으로 대체한다(과거 수지 계산용)
+    return best || first;
+  }
+  // Katch-McArdle: 370 + 21.6 × 제지방량
+  function bmr(c){
+    if(!c || typeof c.w !== 'number' || typeof c.f !== 'number') return null;
+    var lbm = c.w - c.f;
+    if(lbm <= 0) return null;
+    return Math.round(370 + 21.6 * lbm);
+  }
+  // 기본 활동량은 넣지 않는다. BMR을 기준선으로 두고 실제 한 운동만 가산한다.
+  var BURN = {
+    circuit: {label:'서킷 20분',      kcal:150},
+    dumbbell:{label:'덤벨 세션',      kcal:120},
+    range:   {label:'골프연습 1.5h',  kcal:250},
+    round:   {label:'라운딩 18홀',    kcal:700}
+  };
+  function burnList(d){
+    var out = [];
+    if(!d) return out;
+    ['circuit','dumbbell','range','round'].forEach(function(kk){
+      if(d[kk]) out.push({key:kk, label:BURN[kk].label, kcal:BURN[kk].kcal});
+    });
+    return out;
+  }
+  function burnSum(d){
+    return burnList(d).reduce(function(a,x){ return a + x.kcal; }, 0);
+  }
+  function tdee(dt){
+    var b = bmr(comp(dt));
+    if(b === null) return null;
+    return b + burnSum(db.days[key(dt)]);
+  }
+
+  function renderIntake(){
+    var now = new Date(), k = key(now), d = day(k);
+    var c = comp(now), b = bmr(c), t = tdee(now);
+
+    // ── 활동 소모 내역
+    var list = burnList(d), add = burnSum(d);
+    var html = '';
+    html += '<div class="brow base"><span class="l">기초대사량 (BMR)</span><span class="r">' +
+            (b === null ? '—' : b.toLocaleString()) + '</span></div>';
+    if(list.length){
+      list.forEach(function(x){
+        html += '<div class="brow act"><span class="l">' + x.label + '</span><span class="r">+' + x.kcal + '</span></div>';
+      });
+    } else {
+      html += '<div class="brow"><span class="l" style="opacity:.6">아직 기록된 운동 없음</span><span class="r" style="opacity:.6">+0</span></div>';
+    }
+    html += '<div class="brow sum"><span class="l">합계</span><span class="r">' +
+            (t === null ? '—' : t.toLocaleString() + ' kcal') + '</span></div>';
+    document.getElementById('burnList').innerHTML = html;
+    document.getElementById('burnTotal').textContent = add ? '+' + add.toLocaleString() : '+0';
+
+    var badge = document.getElementById('burnBadge');
+    if(add >= 700)      badge.innerHTML = '<span class="badge">오늘 많이 움직였다 · 활동 ' + list.length + '개</span>';
+    else if(add >= 350) badge.innerHTML = '<span class="badge">활동 ' + list.length + '개 · 좋은 하루</span>';
+    else                badge.innerHTML = '';
+
+
+    var kc = document.getElementById('inKcal'), pr = document.getElementById('inProt');
+    if(document.activeElement !== kc) kc.value = (d.kcal === null || d.kcal === undefined) ? '' : d.kcal;
+    if(document.activeElement !== pr) pr.value = (d.prot === null || d.prot === undefined) ? '' : d.prot;
+
+    var balBox = document.getElementById('roBalBox'), balEl = document.getElementById('roBal');
+    var warn = document.getElementById('deficitWarn');
+    var hasK = !(d.kcal === null || d.kcal === undefined || d.kcal === '');
+    if(!hasK || t === null){
+      balEl.textContent = '—'; balBox.className = 'ro'; warn.hidden = true;
+    } else {
+      var bal = d.kcal - t;
+      balEl.textContent = (bal > 0 ? '+' : '') + bal.toLocaleString() + ' kcal';
+      balBox.className = 'ro ' + (bal > 300 ? 'bad' : (bal < -800 ? 'bad' : (bal <= 0 ? 'good' : 'mid')));
+      if(b !== null && d.kcal < b){
+        warn.hidden = false;
+        warn.innerHTML = '<b>섭취가 기초대사량(' + b.toLocaleString() + ')보다 적다.</b> ' +
+          '여기에 농장일·걷기 같은 기본 활동량이 더해지니 실제 적자는 표시보다 훨씬 크다. ' +
+          '이 상태가 이어지면 근육부터 빠진다.';
+      } else if(bal < -800){
+        warn.hidden = false;
+        warn.innerHTML = '<b>적자가 800kcal을 넘었다.</b> 이 페이스가 이어지면 4월처럼 근육부터 빠진다. ' +
+          '단백질과 하체 운동을 먼저 확보하고, 적자는 500~700 선에서 잡는다.';
+      } else if(bal > 300){
+        warn.hidden = false;
+        warn.innerHTML = '<b>흑자다.</b> 하루쯤은 괜찮다. 다만 사흘 연속이면 체중이 올라간다.';
+      } else { warn.hidden = true; }
+    }
+
+    var pBox = document.getElementById('roProtBox'), pEl = document.getElementById('roProt');
+    if(d.prot === null || d.prot === undefined || d.prot === ''){
+      pEl.textContent = '—'; pBox.className = 'ro';
+    } else {
+      pEl.textContent = d.prot + ' g';
+      pBox.className = 'ro ' + (d.prot >= PROT_TARGET ? 'good' : (d.prot >= PROT_TARGET*0.8 ? 'mid' : 'bad'));
+    }
+
+    var wIn = document.getElementById('inWeight'), fIn = document.getElementById('inFat');
+    var box = document.getElementById('compInputs');
+    var saveBtn = document.getElementById('saveWeight'), editBtn = document.getElementById('editWeight');
+    var note = document.getElementById('weightNote');
+
+    if(c && !compEditing){
+      // 입력 완료 상태 — 값 고정
+      box.hidden = true; saveBtn.hidden = true; editBtn.hidden = false;
+      var lbm = c.w - c.f, pctF = c.f / c.w * 100;
+      note.innerHTML =
+        '<span style="color:var(--ink);font-size:14px">' + c.w.toFixed(1) + 'kg · 체지방 ' +
+        c.f.toFixed(1) + 'kg (' + pctF.toFixed(1) + '%)</span><br>' +
+        '제지방 ' + lbm.toFixed(1) + 'kg · BMR ' + b.toLocaleString() + ' kcal<br>' +
+        '<span style="color:var(--accent)">' + compDateLabel() + ' 입력 · 다음 ' + nextMondayLabel() + '</span>';
+    } else {
+      box.hidden = false; saveBtn.hidden = false; editBtn.hidden = true;
+      if(document.activeElement !== wIn && !compEditing) wIn.value = '';
+      if(document.activeElement !== fIn && !compEditing) fIn.value = '';
+      if(c){
+        wIn.placeholder = c.w.toFixed(1); fIn.placeholder = c.f.toFixed(1);
+        note.textContent = '새 값을 넣고 저장하면 이번 주 기준이 바뀐다.';
+      } else {
+        wIn.placeholder = '—'; fIn.placeholder = '—';
+        note.textContent = '체중과 체지방량을 함께 입력해야 BMR이 계산된다.';
+      }
+    }
+  }
+
+  function compDateLabel(){
+    var bestK = null;
+    Object.keys(db.weights || {}).forEach(function(k){
+      if(k <= key(new Date()) && (bestK === null || k > bestK)) bestK = k;
+    });
+    if(!bestK) return '—';
+    var pp = bestK.split('-');
+    var dd = new Date(bestK + 'T00:00:00');
+    return (+pp[1]) + '/' + (+pp[2]) + '(' + DOW[dd.getDay()] + ')';
+  }
+  function nextMondayLabel(){
+    var c2 = new Date(); c2.setHours(0,0,0,0);
+    do { c2.setDate(c2.getDate() + 1); } while (c2.getDay() !== 1);
+    return (c2.getMonth()+1) + '/' + c2.getDate() + '(월)';
+  }
+
+  ['inKcal','inProt'].forEach(function(id){
+    document.getElementById(id).addEventListener('input', function(){
+      var d = day(key(new Date()));
+      var v = this.value === '' ? null : Math.max(0, parseInt(this.value,10) || 0);
+      d[id === 'inKcal' ? 'kcal' : 'prot'] = v;
+      save(); renderIntake();
+    });
+  });
+  document.getElementById('saveWeight').addEventListener('click', function(){
+    var wEl = document.getElementById('inWeight'), fEl = document.getElementById('inFat');
+    var wv = parseFloat(wEl.value), fv = parseFloat(fEl.value);
+    if(isNaN(wv) || wv < 30 || wv > 300) return;
+    if(isNaN(fv) || fv < 1 || fv >= wv) return;      // 체지방은 체중보다 작아야 한다
+    if(!db.weights) db.weights = {};
+    db.weights[key(new Date())] = {w: Math.round(wv*10)/10, f: Math.round(fv*10)/10};
+    wEl.value = ''; fEl.value = ''; wEl.blur(); fEl.blur();
+    compEditing = false;
+    save(); renderIntake(); renderRecord();
+  });
+
+  document.getElementById('editWeight').addEventListener('click', function(){
+    compEditing = true; renderIntake();
+  });
+
+  // 기간 집계: [from, to] 사이 실행률·수지·음주·단백질
+  function aggregate(from, to){
+    var exD=0, exT=0, bal=0, nb=0, drink=0, prot=0, np=0, logged=0;
+    var burn=0, acts=0, byAct={circuit:0,dumbbell:0,range:0,round:0};
+    var c = new Date(from); c.setHours(0,0,0,0);
+    var end = new Date(to); end.setHours(0,0,0,0);
+    while(c <= end){
+      var k2 = key(c), r = db.days[k2];
+      if(r){
+        logged++;
+        if(r.drink) drink++;
+        var sc = score(k2, new Date(c));
+        exT += sc.total; exD += sc.done;
+        burnList(r).forEach(function(x){ burn += x.kcal; acts++; byAct[x.key]++; });
+        if(r.kcal !== null && r.kcal !== undefined && r.kcal !== ''){
+          var t2 = tdee(new Date(c));
+          if(t2 !== null){ bal += (r.kcal - t2); nb++; }
+        }
+        if(r.prot !== null && r.prot !== undefined && r.prot !== ''){ prot += r.prot; np++; }
+      }
+      c.setDate(c.getDate()+1);
+    }
+    return {exPct: exT ? Math.round(exD/exT*100) : 0, bal: nb ? bal : null,
+            drink: drink, prot: np ? Math.round(prot/np) : null, logged: logged,
+            burn: burn, acts: acts, byAct: byAct};
+  }
+  function balClass(v){ return 'v' ; }
+  function paintBal(boxId, elId, v){
+    var el = document.getElementById(elId), box = document.getElementById(boxId);
+    if(v === null){ el.textContent = '—'; box.style.color = ''; return; }
+    el.textContent = (v > 0 ? '+' : '') + v.toLocaleString();
+    box.style.color = v > 0 ? 'var(--stop)' : 'var(--ok)';
+  }
+
+  function renderPeriods(){
+    var now = new Date();
+    var ws = startOfWeek(now);
+    var w = aggregate(ws, now);
+    document.getElementById('wkRange').textContent =
+      (ws.getMonth()+1) + '/' + ws.getDate() + ' ~ ' + (now.getMonth()+1) + '/' + now.getDate();
+    document.getElementById('wEx').textContent = w.exPct;
+    paintBal('wBalBox','wBal', w.bal);
+    document.getElementById('wDrinkN').textContent = w.drink;
+    document.getElementById('wProt').textContent = w.prot === null ? '—' : w.prot;
+    document.getElementById('wBurn').textContent = w.burn.toLocaleString();
+    document.getElementById('wActs').textContent = w.acts;
+    document.getElementById('wActBody').innerHTML =
+      ['circuit','dumbbell','range','round'].map(function(kk){
+        var n = w.byAct[kk];
+        return '<tr><td>' + BURN[kk].label + '</td>' +
+               '<td class="num">' + n + '회</td>' +
+               '<td class="num" style="color:' + (n ? 'var(--ok)' : 'var(--ink-dim)') + '">' +
+               (n ? '+' + (n*BURN[kk].kcal).toLocaleString() : '—') + '</td></tr>';
+      }).join('');
+
+    var y = calCursor.getFullYear(), m = calCursor.getMonth();
+    var m0 = new Date(y, m, 1), m1 = new Date(y, m+1, 0);
+    var mm = aggregate(m0, m1);
+    document.getElementById('sEx').textContent = mm.exPct;
+    paintBal('mBalBox','mBal', mm.bal);
+    document.getElementById('mDrinkN').textContent = mm.drink;
+  }
+
+  function renderAverages(){
+    var now = new Date(), sumK=0, sumB=0, sumP=0, n=0, np=0, nb=0;
+    var c = new Date(now); c.setHours(0,0,0,0);
+    for(var i=0;i<7;i++){
+      var r = db.days[key(c)];
+      if(r && r.kcal !== null && r.kcal !== undefined && r.kcal !== ''){
+        var tt = tdee(new Date(c));
+        sumK += r.kcal; if(tt !== null){ sumB += (r.kcal - tt); nb++; } n++;
+      }
+      if(r && r.prot !== null && r.prot !== undefined && r.prot !== ''){ sumP += r.prot; np++; }
+      c.setDate(c.getDate()-1);
+    }
+    document.getElementById('aKcal').textContent = n ? Math.round(sumK/n).toLocaleString() : '—';
+    var ab = nb ? Math.round(sumB/nb) : null;
+    document.getElementById('aBal').textContent = ab === null ? '—' : (ab>0?'+':'') + ab.toLocaleString();
+    document.getElementById('aProt').textContent = np ? Math.round(sumP/np) : '—';
+    document.getElementById('aDays').textContent = n;
+  }
+
+  function renderToday(){
+    var now = new Date(), k = key(now), d = day(k), wd = now.getDay();
+    document.getElementById('todayDate').textContent = (now.getMonth()+1) + '월 ' + now.getDate() + '일';
+    document.getElementById('todayWeek').textContent = DOW[wd] + '요일';
+
+    var d0 = day(k);
+    var rest = !!d0.rest;
+    var plan = nextPart(now);
+    var label = plan === 'upper' ? '상체 덤벨' : '하체 덤벨';
+    document.getElementById('dbLabel').textContent = rest ? '덤벨 세션 (오늘 휴식)' : label;
+    document.getElementById('dbSub').textContent = plan === 'upper'
+      ? '컬 · 해머컬 · 로우 · 리버스플라이 · 스밴드프레스'
+      : 'RDL 10kg · 리버스런지 5kg';
+    document.getElementById('todayPlan').innerHTML = rest
+      ? '오늘은 <b>휴식</b>. 영양제 · 물 · 무음주만 챙긴다'
+      : '오늘 차례는 <b>' + label + '</b>';
+
+    document.getElementById('restBanner').hidden = !rest;
+    document.getElementById('restToggle').dataset.on = rest ? '1' : '0';
+    document.getElementById('partSwap').textContent =
+      (plan === 'upper' ? '하체' : '상체') + '로 바꾸기';
+    document.getElementById('partSwap').hidden = rest;
+    document.getElementById('restWeek').textContent = restCountThisWeek(now);
+
+    ['dumbbell','circuit','round','range'].forEach(function(kk){
+      var b = document.querySelector('.chk[data-key="'+kk+'"]');
+      if(b) b.classList.toggle('locked', rest);
+    });
+
+    document.querySelectorAll('.chk').forEach(function(b){
+      b.dataset.on = d[b.dataset.key] ? '1' : '0';
+    });
+    // 라운딩이면 서킷 잠금 표시
+    var cBtn = document.querySelector('.chk[data-key="circuit"]');
+    if(!rest) cBtn.classList.remove('locked');
+
+    glassBox.querySelectorAll('.glass').forEach(function(g, idx){
+      g.dataset.on = (idx < d.water) ? '1' : '0';
+    });
+    document.getElementById('waterAmt').textContent =
+      (d.water*250).toLocaleString() + ' / 3,000ml';
+
+    var s = score(k, now);
+    var pct = s.total ? Math.round(s.done/s.total*100) : 0;
+    document.getElementById('ringPct').textContent = pct + '%';
+    document.getElementById('ringFrac').textContent =
+      s.done + ' / ' + s.total + (s.bonus ? ' +' + s.bonus : '');
+    document.getElementById('ringArc').style.strokeDashoffset = 251.3 * (1 - pct/100);
+    document.getElementById('ringArc').setAttribute('stroke',
+      s.drink ? 'var(--stop)' : 'var(--accent)');
+
+    // 음주 카운터
+    var wk = countDrink(startOfWeek(now), now);
+    var mo = countDrinkMonth(now.getFullYear(), now.getMonth());
+    document.getElementById('wkDrink').textContent = wk;
+    document.getElementById('moDrink').textContent = mo;
+    document.getElementById('ctrWeek').classList.toggle('warn-lv', wk >= 2);
+    document.getElementById('ctrMonth').classList.toggle('warn-lv', mo >= 5);
+
+    renderSupp();
+    renderIntake();
+
+    var st = streaks();
+    document.getElementById('streak').textContent = st.cur;
+    document.getElementById('best').textContent = st.best;
+
+    // 어제 덤벨 이월 안내
+    var y = new Date(now); y.setDate(y.getDate()-1);
+    var yk = key(y), yd = db.days[yk];
+    var cw = document.getElementById('carryWarn');
+    if (yd && !isRest(y) && !yd.dumbbell && (yd.round || yd.range)){
+      cw.hidden = false;
+      cw.innerHTML = '<b>어제 골프로 덤벨을 건너뛰었다.</b> 오늘 여유가 있으면 ' +
+        (nextPart(now)==='upper'?'상체':'하체') + ' 세션을 이월해서 해도 된다.';
+    } else { cw.hidden = true; }
+  }
+
+  // 주 시작은 월요일(한국 기준). 일요일은 그 주의 마지막 날이다.
+  function startOfWeek(d){
+    var s = new Date(d); s.setHours(0,0,0,0);
+    var off = (s.getDay() + 6) % 7;   // 월=0 ... 일=6
+    s.setDate(s.getDate() - off);
+    return s;
+  }
+  function countDrink(from, to){
+    var n=0, c=new Date(from);
+    while(c <= to){ var d=db.days[key(c)]; if(d && d.drink) n++; c.setDate(c.getDate()+1); }
+    return n;
+  }
+  function countDrinkMonth(y,m){
+    var n=0;
+    Object.keys(db.days).forEach(function(k){
+      var p=k.split('-');
+      if(+p[0]===y && +p[1]===m+1 && db.days[k].drink) n++;
+    });
+    return n;
+  }
+  function streaks(){
+    var keys = Object.keys(db.days).sort();
+    if(!keys.length) return {cur:0,best:0};
+    var best=0, run=0, prev=null, cur=0;
+    keys.forEach(function(k){
+      var dt=new Date(k+'T00:00:00');
+      var s=score(k, dt);
+      var ok = s.total && s.done === s.total;
+      if(ok){
+        if(prev && (dt - prev)/86400000 === 1) run++; else run = 1;
+        if(run>best) best=run;
+        prev = dt;
+      } else { run = 0; prev = null; }
+    });
+    // 현재 연속: 오늘 또는 어제부터 역산
+    var c = new Date(); c.setHours(0,0,0,0);
+    var todayScore = score(key(c), c);
+    if(!(todayScore.total && todayScore.done === todayScore.total)) c.setDate(c.getDate()-1);
+    while(true){
+      var k2 = key(c);
+      if(!has(k2)) break;
+      var s2 = score(k2, c);
+      if(!(s2.total && s2.done === s2.total)) break;
+      cur++; c.setDate(c.getDate()-1);
+    }
+    if(cur>best) best=cur;
+    return {cur:cur, best:best};
+  }
+
+  /* ── 기록 화면 ── */
+  function renderRecord(){
+    var y = calCursor.getFullYear(), m = calCursor.getMonth();
+    document.getElementById('calMonth').textContent = y + '년 ' + (m+1) + '월';
+    var grid = document.getElementById('calGrid');
+    grid.innerHTML = '';
+    CAL_DOW.forEach(function(w){
+      var e=document.createElement('div'); e.className='dow'; e.textContent=w; grid.appendChild(e);
+    });
+    var first = new Date(y,m,1), last = new Date(y,m+1,0);
+    var lead = (first.getDay() + 6) % 7;   // 월요일 시작 기준 앞 빈칸
+    for(var i=0;i<lead;i++){
+      var e=document.createElement('div'); e.className='cell empty'; grid.appendChild(e);
+    }
+    var todayKey = key(new Date());
+    var exDone=0, exTotal=0, wDone=0, sober=0, rounds=0, ranges=0, logged=0;
+    for(var dnum=1; dnum<=last.getDate(); dnum++){
+      var dt=new Date(y,m,dnum), k=key(dt);
+      var cell=document.createElement('div'); cell.className='cell';
+      if(k===todayKey) cell.classList.add('today');
+      var num=document.createElement('span'); num.textContent=dnum; cell.appendChild(num);
+      var dot=document.createElement('span'); dot.className='dot';
+      var rec=db.days[k];
+      if(rec){
+        logged++;
+        var s=score(k,dt);
+        if(rec.rest && !rec.drink) dot.style.background='var(--sun)';
+        else if(rec.drink) dot.style.background='var(--stop)';
+        else if(s.done===s.total) dot.style.background='var(--ok)';
+        else if(s.done>0) dot.style.background='var(--upper)';
+        else dot.style.background='var(--line)';
+        if(rec.water>=12) wDone++;
+        if(!rec.drink) sober++;
+        if(rec.round) rounds++;
+        if(rec.range) ranges++;
+        var scc = score(k, dt);
+        exTotal += scc.total; exDone += scc.done;
+      } else { dot.style.background='var(--line)'; }
+      cell.appendChild(dot);
+      grid.appendChild(cell);
+    }
+    document.getElementById('statMonth').textContent = (m+1)+'월 · 기록 '+logged+'일';
+    document.getElementById('sWater').textContent = logged ? Math.round(wDone/logged*100) : 0;
+    document.getElementById('sSober').textContent = logged ? Math.round(sober/logged*100) : 0;
+    document.getElementById('sRound').textContent = rounds;
+    document.getElementById('sRange').textContent = ranges;
+    renderPeriods();
+    renderAverages();
+    renderHistory();
+  }
+
+  function renderHistory(){
+    var months = {};
+    Object.keys(db.days).forEach(function(k){
+      var mk = k.slice(0,7);
+      if(!months[mk]) months[mk]={exD:0,exT:0,w:0,drink:0,bal:0,nb:0,n:0};
+      var dt=new Date(k+'T00:00:00'), rec=db.days[k], o=months[mk];
+      o.n++;
+      if(rec.water>=12) o.w++;
+      if(rec.drink) o.drink++;
+      if(rec.kcal !== null && rec.kcal !== undefined && rec.kcal !== ''){
+        var tb = tdee(dt); if(tb !== null){ o.bal += (rec.kcal - tb); o.nb++; }
+      }
+      var sc2 = score(k, dt);
+      o.exT += sc2.total; o.exD += sc2.done;
+    });
+    var keys = Object.keys(months).sort().reverse();
+    var body = document.getElementById('histBody');
+    if(!keys.length){
+      body.innerHTML = '<tr><td colspan="5" style="color:var(--ink-dim)">아직 기록이 없습니다.</td></tr>';
+      return;
+    }
+    body.innerHTML = keys.map(function(mk){
+      var o = months[mk], p = mk.split('-');
+      var over = o.drink > 5;
+      return '<tr><td>'+(+p[1])+'월</td>'+
+        '<td class="num">'+(o.exT?Math.round(o.exD/o.exT*100):0)+'%</td>'+
+        '<td class="num" style="color:'+(o.nb ? (o.bal>0?'var(--stop)':'var(--ok)') : 'var(--ink-dim)')+'">'+
+          (o.nb ? ((o.bal>0?'+':'')+Math.round(o.bal).toLocaleString()) : '—')+'</td>'+
+        '<td class="num">'+(o.n?Math.round(o.w/o.n*100):0)+'%</td>'+
+        '<td class="num" style="color:'+(over?'var(--stop)':'var(--ink-dim)')+'">'+o.drink+' / 5</td></tr>';
+    }).join('');
+  }
+
+  document.getElementById('prevM').addEventListener('click', function(){
+    calCursor.setMonth(calCursor.getMonth()-1); renderRecord();
+  });
+  document.getElementById('nextM').addEventListener('click', function(){
+    calCursor.setMonth(calCursor.getMonth()+1); renderRecord();
+  });
+
+  /* ── 내보내기 / 불러오기 ── */
+  document.getElementById('exportBtn').addEventListener('click', function(){
+    var blob = new Blob([JSON.stringify(db,null,2)], {type:'application/json'});
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'anchor-' + key(new Date()) + '.json';
+    a.click(); URL.revokeObjectURL(a.href);
+  });
+  document.getElementById('importBtn').addEventListener('click', function(){
+    document.getElementById('fileInput').click();
+  });
+  document.getElementById('fileInput').addEventListener('change', function(e){
+    var f = e.target.files[0]; if(!f) return;
+    var r = new FileReader();
+    r.onload = function(){
+      try {
+        var j = JSON.parse(r.result);
+        if(j && j.days){
+          Object.keys(j.days).forEach(function(k){ db.days[k] = j.days[k]; });
+          save(); renderToday(); renderRecord();
+        }
+      } catch(err){ /* 잘못된 파일은 무시한다 */ }
+    };
+    r.readAsText(f);
+    e.target.value = '';
+  });
+  document.getElementById('wipeBtn').addEventListener('click', function(){
+    if(confirm('모든 기록을 지웁니다. 되돌릴 수 없습니다.')){
+      db = {days:{}}; save(); renderToday(); renderRecord();
+    }
+  });
+
+  /* ── 세트 버튼 (루틴 탭) ── */
+  document.querySelectorAll('.sets').forEach(function(box){
+    var n = parseInt(box.dataset.sets,10), extra = box.dataset.extra === '1';
+    var lab = document.createElement('span'); lab.className='lab'; lab.textContent='SETS';
+    box.appendChild(lab);
+    for(var i=1;i<=n;i++){
+      var b=document.createElement('button');
+      var isExtra = extra && i===n;
+      b.className='set'+(isExtra?' extra':''); b.type='button'; b.dataset.on='0';
+      b.textContent = isExtra ? 'L+' : i+'세트';
+      b.setAttribute('aria-pressed','false');
+      b.addEventListener('click', function(){
+        var on = this.dataset.on==='1' ? '0' : '1';
+        this.dataset.on = on; this.setAttribute('aria-pressed', on==='1');
+      });
+      box.appendChild(b);
+    }
+  });
+
+  /* ── 탭 ── */
+  var mains = {today:document.getElementById('main-today'),
+               routine:document.getElementById('main-routine'),
+               record:document.getElementById('main-record')};
+  var panels = {upper:document.getElementById('panel-upper'),
+                lower:document.getElementById('panel-lower'),
+                sun:document.getElementById('panel-sun')};
+  var accents = {upper:'#E0A458', lower:'#7FA45C', sun:'#8AA8C8'};
+  var subTabs = document.getElementById('subTabs');
+
+  document.querySelectorAll('[data-main]').forEach(function(t){
+    t.addEventListener('click', function(){
+      mainTab = this.dataset.main;
+      document.querySelectorAll('[data-main]').forEach(function(x){
+        x.setAttribute('aria-selected', x===t);
+      });
+      Object.keys(mains).forEach(function(k){ mains[k].hidden = (k!==mainTab); });
+      subTabs.hidden = (mainTab !== 'routine');
+      document.documentElement.style.setProperty('--accent',
+        mainTab==='routine' ? accents[routineTab] : '#E0A458');
+      if(mainTab==='record') renderRecord();
+      if(mainTab==='today') renderToday();
+      window.scrollTo({top:0,behavior:'smooth'});
+    });
+  });
+  document.querySelectorAll('[data-day]').forEach(function(t){
+    t.addEventListener('click', function(){
+      routineTab = this.dataset.day;
+      document.querySelectorAll('[data-day]').forEach(function(x){
+        x.setAttribute('aria-selected', x===t);
+      });
+      Object.keys(panels).forEach(function(k){
+        if(panels[k]) panels[k].hidden = (k!==routineTab);
+      });
+      document.documentElement.style.setProperty('--accent', accents[routineTab]);
+      window.scrollTo({top:0,behavior:'smooth'});
+    });
+  });
+
+  // 오늘 요일에 맞는 루틴 탭 기본 선택
+  routineTab = nextPart(new Date());
+  Object.keys(panels).forEach(function(k){ if(panels[k]) panels[k].hidden = (k!==routineTab); });
+  document.querySelectorAll('[data-day]').forEach(function(x){
+    x.setAttribute('aria-selected', x.dataset.day===routineTab);
+  });
+
+  document.getElementById('restToggle').addEventListener('click', function(){
+    var d = day(key(new Date()));
+    d.rest = !d.rest;
+    if(d.rest){ d.dumbbell = false; d.circuit = false; d.round = false; d.range = false; d.part = null; }
+    save(); renderToday(); renderRecord();
+  });
+  document.getElementById('partSwap').addEventListener('click', function(){
+    var now = new Date(), d = day(key(now));
+    d.part = (nextPart(now) === 'upper') ? 'lower' : 'upper';
+    save(); renderToday();
+    routineTab = d.part;
+    Object.keys(panels).forEach(function(x){ if(panels[x]) panels[x].hidden = (x!==routineTab); });
+    document.querySelectorAll('[data-day]').forEach(function(x){
+      x.setAttribute('aria-selected', x.dataset.day===routineTab);
+    });
+  });
+
+  renderToday();
+  renderRecord();
+})();
+</script>
+</body>
+</html>
