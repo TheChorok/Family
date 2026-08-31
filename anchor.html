@@ -262,15 +262,15 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
         </button>
         <button class="chk" data-key="round">
           <span class="box">✓</span>
-          <span class="txt"><b>라운딩</b><small>18홀 · 서킷 자동 충족</small></span>
+          <span class="txt"><b>라운딩</b><small>18홀 · 보너스 +1</small></span>
         </button>
         <button class="chk" data-key="range">
           <span class="box">✓</span>
-          <span class="txt"><b>골프연습</b><small>연습장 1.5시간 · 서킷 자동 충족</small></span>
+          <span class="txt"><b>골프연습</b><small>연습장 1.5시간 · 보너스 +1</small></span>
         </button>
         <button class="chk drink" data-key="drink">
           <span class="box">✓</span>
-          <span class="txt"><b>오늘 음주함</b><small id="drinkSub">주 2회 · 월 5회 상한</small></span>
+          <span class="txt"><b>오늘 음주함</b><small id="drinkSub">링에서 제외 · 체크 시 링이 붉게 표시된다</small></span>
         </button>
       </div>
     </div>
@@ -693,6 +693,7 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
   "use strict";
   var KEY = 'shower_anchor_v1';
   var DOW = ['일','월','화','수','목','금','토'];
+  var SUPP_TOTAL = 15;   // 영양제 항목 총 개수 (SUPP 정의와 일치)
   var CAL_DOW = ['월','화','수','목','금','토','일'];
   // 요일별 덤벨 배정: 0=일 휴식, 1/3/5=상체, 2/4/6=하체
   // 요일 고정 없음. 마지막으로 수행한 덤벨 세션의 반대가 다음 차례가 된다.
@@ -751,18 +752,29 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
   function has(k){ return Object.prototype.hasOwnProperty.call(db.days, k); }
 
   // 그날의 목표 항목 수와 달성 수
+  // 기본 항목: 서킷 · 덤벨 · 물 · 영양제 (휴식일은 서킷·덤벨 제외)
+  // 골프연습/라운딩은 보너스(+). 음주는 감점 표시(링 계산엔 미포함).
   function score(k, dateObj){
-    var d = db.days[k]; if(!d) return {done:0, total:0};
+    var d = db.days[k];
+    if(!d) return {done:0, total:0, bonus:0, drink:false, rest:false};
     var rest = !!d.rest;
-    var total = 2, done = 0;          // 물 + 무음주는 휴식일에도 유지
+    var total = 2, done = 0, bonus = 0;   // 물 + 영양제는 휴식일에도 유지
     if(d.water >= 12) done++;
-    if(!d.drink) done++;
+    if(suppDone(d)) done++;
     if(!rest){
-      total += 2;                     // 서킷 + 덤벨
-      if(d.circuit || d.round || d.range) done++;
+      total += 2;                          // 서킷 + 덤벨
+      if(d.circuit || d.round || d.range) done++;   // 골프만 해도 서킷 충족
       if(d.dumbbell) done++;
     }
-    return {done:done, total:total, rest:rest};
+    if(d.round) bonus++;
+    if(d.range) bonus++;
+    return {done:done, total:total, bonus:bonus, drink:!!d.drink, rest:rest};
+  }
+  function suppDone(d){
+    if(!d || !d.supp) return false;
+    var n = 0;
+    Object.keys(d.supp).forEach(function(x){ if(d.supp[x]) n++; });
+    return n >= SUPP_TOTAL;
   }
 
   /* ── 오늘 화면 ── */
@@ -785,7 +797,6 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
       if(this.classList.contains('locked')) return;
       var k = key(new Date()), d = day(k), f = this.dataset.key;
       d[f] = !d[f];
-      if((f === 'round' || f === 'range') && d[f]) d.circuit = true; // 라운딩·골프연습 = 서킷 충족
       if(f === 'dumbbell') d.part = d.dumbbell ? nextPart(new Date()) : null;
       save(); renderToday(); renderRecord();
     });
@@ -801,7 +812,6 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
                               ['md','마데카솔'],['cr2','크레아틴'],['cla2','CLA']]},
     {t:'취침 전', items:[['xg','잔티젠']]}
   ];
-  var SUPP_TOTAL = SUPP.reduce(function(a,g){ return a + g.items.length; }, 0);
 
   (function buildSupp(){
     var box = document.getElementById('suppBox');
@@ -818,7 +828,7 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
           var d = day(key(new Date()));
           if(!d.supp) d.supp = {};
           d.supp[this.dataset.sid] = !d.supp[this.dataset.sid];
-          save(); renderSupp();
+          save(); renderToday();
         });
         row.appendChild(b);
       });
@@ -836,7 +846,10 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
       b.setAttribute('aria-pressed', on);
       if(on) n++;
     });
-    document.getElementById('suppCnt').textContent = n + ' / ' + SUPP_TOTAL;
+    var cntEl = document.getElementById('suppCnt');
+    cntEl.textContent = n + ' / ' + SUPP_TOTAL;
+    cntEl.style.color = (n >= SUPP_TOTAL) ? 'var(--ok)' : 'var(--accent)';
+    if(typeof renderRing === 'function') renderRing();
   }
 
   /* ── 대사량 계산 ── */
@@ -987,10 +1000,8 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
       if(r){
         logged++;
         if(r.drink) drink++;
-        if(!r.rest){
-          exT += 2;
-          exD += ((r.circuit||r.round||r.range)?1:0) + (r.dumbbell?1:0);
-        }
+        var sc = score(k2, new Date(c));
+        exT += sc.total; exD += sc.done;
         if(r.kcal !== null && r.kcal !== undefined && r.kcal !== ''){
           var t2 = tdee(new Date(c));
           if(t2 !== null){ bal += (r.kcal - t2); nb++; }
@@ -1082,7 +1093,7 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
     });
     // 라운딩이면 서킷 잠금 표시
     var cBtn = document.querySelector('.chk[data-key="circuit"]');
-    if(!rest) cBtn.classList.toggle('locked', !!(d.round || d.range));
+    if(!rest) cBtn.classList.remove('locked');
 
     glassBox.querySelectorAll('.glass').forEach(function(g, idx){
       g.dataset.on = (idx < d.water) ? '1' : '0';
@@ -1093,8 +1104,11 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
     var s = score(k, now);
     var pct = s.total ? Math.round(s.done/s.total*100) : 0;
     document.getElementById('ringPct').textContent = pct + '%';
-    document.getElementById('ringFrac').textContent = s.done + ' / ' + s.total;
+    document.getElementById('ringFrac').textContent =
+      s.done + ' / ' + s.total + (s.bonus ? ' +' + s.bonus : '');
     document.getElementById('ringArc').style.strokeDashoffset = 251.3 * (1 - pct/100);
+    document.getElementById('ringArc').setAttribute('stroke',
+      s.drink ? 'var(--stop)' : 'var(--accent)');
 
     // 음주 카운터
     var wk = countDrink(startOfWeek(now), now);
@@ -1206,10 +1220,8 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
         if(!rec.drink) sober++;
         if(rec.round) rounds++;
         if(rec.range) ranges++;
-        var isR = !!rec.rest;
-        var need = isR ? 0 : 2;
-        var got = isR ? 0 : (((rec.circuit||rec.round||rec.range)?1:0) + (rec.dumbbell?1:0));
-        exTotal += need; exDone += got;
+        var scc = score(k, dt);
+        exTotal += scc.total; exDone += scc.done;
       } else { dot.style.background='var(--line)'; }
       cell.appendChild(dot);
       grid.appendChild(cell);
@@ -1236,9 +1248,8 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
       if(rec.kcal !== null && rec.kcal !== undefined && rec.kcal !== ''){
         var tb = tdee(dt); if(tb !== null){ o.bal += (rec.kcal - tb); o.nb++; }
       }
-      var isR = !!rec.rest;
-      o.exT += isR ? 0 : 2;
-      o.exD += isR ? 0 : (((rec.circuit||rec.round||rec.range)?1:0) + (rec.dumbbell?1:0));
+      var sc2 = score(k, dt);
+      o.exT += sc2.total; o.exD += sc2.done;
     });
     var keys = Object.keys(months).sort().reverse();
     var body = document.getElementById('histBody');
