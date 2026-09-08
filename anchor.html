@@ -178,6 +178,8 @@ body.readonly #saveWeight{pointer-events:none;opacity:.55}
 
 /* 통계 */
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.wk-row{cursor:pointer}
+.wk-row:active{background:var(--surface)}
 .stat{background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:13px}
 .stat .k{font-size:12px;color:var(--ink-dim)}
 .stat .v{font-family:var(--mono);font-size:23px;font-weight:700;margin-top:4px;line-height:1}
@@ -333,9 +335,11 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
       </div>
       <div id="suppBox"></div>
       <div class="warn" style="margin-top:12px">
-        <b>기상 공복엔 물만.</b> 유산균·밀크시슬·CLA는 전부 첫 식사 시점으로 옮겼다.
-        빈속에 먹으면 유산균은 위산에 죽고, CLA는 흡수가 안 되면서 속만 쓰리다.<br><br>
-        <b>CLA는 하루 2정.</b> 일반식 뒤에만 먹는다. 랩노쉬는 지방이 거의 없어 흡수가 안 되니 건너뛴다.
+        <b>기상 공복엔 물만.</b> 유산균·밀크시슬은 첫 식사 시점으로 옮겼다.
+        빈속에 먹으면 유산균은 위산에 죽는다.<br><br>
+        <b>CLA는 2026-09-07 중단.</b> 메타분석에서 체중 감소 효과가 임상적으로 미미했고
+        (대한내분비학회지 2019), 복부비만 남성에서 혈당·인슐린 저항성 악화 신호가 있었다
+        (Diabetes Care 2002 · Am J Clin Nutr 2004). 공복혈당 107에서는 이득보다 위험이 크다.
         저녁이 랩노쉬뿐인 날은 점심 후 1정으로 끝낸다.
       </div>
     </div>
@@ -646,12 +650,11 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
     <tr><th>시점</th><th>내용</th></tr>
     <tr><td>기상 공복</td><td class="num">물 500ml</td></tr>
     <tr><td>첫 식사 직전</td><td class="num">유산균</td></tr>
-    <tr><td>첫 식사 후</td><td class="num">밀크시슬 · 아마칼디 · 비타민C 3,000mg · 피크노제놀 · 베르베린 · 크레아틴 · CLA</td></tr>
-    <tr><td>두 번째 식사 후</td><td class="num">오메가3 · 비타민B · MSM · 마데카솔 · 크레아틴 · CLA</td></tr>
+    <tr><td>첫 식사 후</td><td class="num">밀크시슬 · 아마칼디 · 비타민C 3,000mg · 피크노제놀 · 베르베린 · 크레아틴</td></tr>
+    <tr><td>두 번째 식사 후</td><td class="num">오메가3 · 비타민B · MSM · 마데카솔 · 크레아틴</td></tr>
     <tr><td>취침 전</td><td class="num">잔티젠</td></tr>
   </table>
   <div class="warn" style="margin-top:11px">
-    CLA는 <b>기름 캡슐이라 일반식 뒤에만 먹는다.</b> 하루 2정, 랩노쉬 끼니는 건너뛴다.
     공복혈당 107 상태이므로 다음 검진에서 <b>공복혈당 · 당화혈색소 · 간수치</b>를 확인한다.<br><br>
     <b>베르베린(Berbevis 피토솜 550mg)은 첫 2주 1정.</b> 일반 베르베린보다 흡수율이 높아
     500mg씩 여러 번 먹는 용법을 그대로 쓰면 안 된다. 설사·복부팽만이 없으면 2정으로 늘린다.
@@ -679,6 +682,15 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
       <thead><tr><th>활동</th><th>이번 주</th><th>소모</th></tr></thead>
       <tbody id="wActBody"></tbody>
     </table>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>주간 누계</h2><span>WEEKLY</span></div>
+    <table>
+      <thead><tr><th>주 (월~일)</th><th>실행률</th><th>수지</th><th>일평균</th><th>음주</th></tr></thead>
+      <tbody id="wkBody"></tbody>
+    </table>
+    <div class="hint" style="margin-top:7px">행을 누르면 상세가 펼쳐진다. 기록이 있는 날만 집계된다.</div>
   </section>
 
   <section>
@@ -749,7 +761,7 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
   "use strict";
   var KEY = 'shower_anchor_v1';
   var DOW = ['일','월','화','수','목','금','토'];
-  var SUPP_TOTAL = 16;   // 영양제 항목 총 개수 (SUPP 정의와 일치)
+  var SUPP_TOTAL = 14;   // 영양제 항목 총 개수 (SUPP 정의와 일치)
   var CAL_DOW = ['월','화','수','목','금','토','일'];
   // 요일별 덤벨 배정: 0=일 휴식, 1/3/5=상체, 2/4/6=하체
   // 요일 고정 없음. 마지막으로 수행한 덤벨 세션의 반대가 다음 차례가 된다.
@@ -800,6 +812,11 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
     if(!o.days) o.days = {};
     if(!o.settings) o.settings = {};
     if(!o.weights) o.weights = {};
+    // CLA 중단(2026-09-07)에 따른 레거시 키 정리 — 과거 기록도 14개 기준으로 재계산된다
+    Object.keys(o.days).forEach(function(k){
+      var sp = o.days[k] && o.days[k].supp;
+      if(sp){ delete sp.cla1; delete sp.cla2; }
+    });
     return o;
   }
   function save(){
@@ -874,9 +891,9 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
     {t:'기상 공복', items:[['w','물 500ml']]},
     {t:'첫 식사 직전', items:[['pb','유산균']]},
     {t:'첫 식사 후', items:[['ms','밀크시슬'],['ca','아마칼디'],['vc','비타민C 3,000'],
-                          ['pyc','피크노제놀'],['bb','베르베린'],['cr1','크레아틴'],['cla1','CLA']]},
+                          ['pyc','피크노제놀'],['bb','베르베린'],['cr1','크레아틴']]},
     {t:'두 번째 식사 후', items:[['o3','오메가3'],['vb','비타민B'],['msm','MSM'],
-                              ['md','마데카솔'],['cr2','크레아틴'],['cla2','CLA']]},
+                              ['md','마데카솔'],['cr2','크레아틴']]},
     {t:'취침 전', items:[['xg','잔티젠']]}
   ];
 
@@ -1104,7 +1121,7 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
 
   // 기간 집계: [from, to] 사이 실행률·수지·음주·단백질
   function aggregate(from, to){
-    var exD=0, exT=0, bal=0, nb=0, drink=0, prot=0, np=0, logged=0;
+    var exD=0, exT=0, bal=0, nb=0, drink=0, prot=0, np=0, logged=0, kc=0, nk=0, restN=0;
     var burn=0, acts=0, byAct={circuit:0,dumbbell:0,range:0,round:0};
     var c = new Date(from); c.setHours(0,0,0,0);
     var end = new Date(to); end.setHours(0,0,0,0);
@@ -1113,12 +1130,14 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
       if(r){
         logged++;
         if(r.drink) drink++;
+        if(r.rest) restN++;
         var sc = score(k2, new Date(c));
         exT += sc.total; exD += sc.done;
         burnList(r).forEach(function(x){ burn += x.kcal; acts++; byAct[x.key]++; });
         if(r.kcal !== null && r.kcal !== undefined && r.kcal !== ''){
           var t2 = tdee(new Date(c));
           if(t2 !== null){ bal += (r.kcal - t2); nb++; }
+          kc += r.kcal; nk++;
         }
         if(r.prot !== null && r.prot !== undefined && r.prot !== ''){ prot += r.prot; np++; }
       }
@@ -1126,7 +1145,8 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
     }
     return {exPct: exT ? Math.round(exD/exT*100) : 0, bal: nb ? bal : null,
             drink: drink, prot: np ? Math.round(prot/np) : null, logged: logged,
-            burn: burn, acts: acts, byAct: byAct};
+            burn: burn, acts: acts, byAct: byAct,
+            kcalAvg: nk ? Math.round(kc/nk) : null, nk: nk, rest: restN};
   }
   function balClass(v){ return 'v' ; }
   function paintBal(boxId, elId, v){
@@ -1380,7 +1400,57 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
     document.getElementById('sRange').textContent = ranges;
     renderPeriods();
     renderAverages();
+    renderWeekly();
     renderHistory();
+  }
+
+  // 주간 누계 — 월요일 시작, 최신 주가 위. 최근 8주까지 표시한다.
+  function renderWeekly(){
+    var body = document.getElementById('wkBody');
+    var ks = Object.keys(db.days).sort();
+    if(!ks.length){
+      body.innerHTML = '<tr><td colspan="5" style="color:var(--ink-dim)">아직 기록이 없습니다.</td></tr>';
+      return;
+    }
+    var firstMon = startOfWeek(new Date(ks[0] + 'T00:00:00'));
+    var thisMon  = startOfWeek(new Date());
+    var weeks = [];
+    var c = new Date(thisMon);
+    while(c >= firstMon && weeks.length < 8){
+      var st = new Date(c), en = new Date(c); en.setDate(en.getDate()+6);
+      weeks.push({st:st, en:en});
+      c.setDate(c.getDate()-7);
+    }
+    var html = '';
+    weeks.forEach(function(w, i){
+      var a = aggregate(w.st, w.en);
+      if(!a.logged) return;
+      var avg = (a.bal !== null && a.nk) ? Math.round(a.bal / a.nk) : null;
+      var rid = 'wkd' + i;
+      html += '<tr class="wk-row" data-t="'+rid+'">' +
+        '<td>' + (w.st.getMonth()+1) + '/' + w.st.getDate() + '~' + (w.en.getMonth()+1) + '/' + w.en.getDate() + '</td>' +
+        '<td class="num">' + a.exPct + '%</td>' +
+        '<td class="num" style="color:' + (a.bal === null ? 'var(--ink-dim)' : (a.bal > 0 ? 'var(--stop)' : 'var(--ok)')) + '">' +
+          (a.bal === null ? '—' : (a.bal > 0 ? '+' : '') + Math.round(a.bal).toLocaleString()) + '</td>' +
+        '<td class="num" style="color:' + (avg === null ? 'var(--ink-dim)' : (avg > 0 ? 'var(--stop)' : 'var(--ok)')) + '">' +
+          (avg === null ? '—' : (avg > 0 ? '+' : '') + avg.toLocaleString()) + '</td>' +
+        '<td class="num" style="color:' + (a.drink > 2 ? 'var(--stop)' : 'var(--ink-dim)') + '">' + a.drink + '</td></tr>' +
+        '<tr id="' + rid + '" hidden><td colspan="5" style="padding:0">' +
+          '<div style="background:var(--bg);border-radius:9px;padding:10px;font-size:12px;line-height:1.9;color:var(--ink-dim)">' +
+            '섭취 평균 <b style="color:var(--ink)">' + (a.kcalAvg === null ? '—' : a.kcalAvg.toLocaleString() + ' kcal') + '</b><br>' +
+            '단백질 평균 <b style="color:var(--ink)">' + (a.prot === null ? '—' : a.prot + ' g') + '</b><br>' +
+            '활동 소모 <b style="color:var(--ink)">' + a.burn.toLocaleString() + ' kcal</b> · ' + a.acts + '회<br>' +
+            '서킷 ' + a.byAct.circuit + ' · 덤벨 ' + a.byAct.dumbbell + ' · 연습 ' + a.byAct.range + ' · 라운딩 ' + a.byAct.round + '<br>' +
+            '기록일 <b style="color:var(--ink)">' + a.logged + ' / 7</b> · 휴식 ' + a.rest + '일' +
+          '</div></td></tr>';
+    });
+    body.innerHTML = html || '<tr><td colspan="5" style="color:var(--ink-dim)">아직 기록이 없습니다.</td></tr>';
+    [].forEach.call(body.querySelectorAll('.wk-row'), function(tr){
+      tr.addEventListener('click', function(){
+        var t = document.getElementById(this.dataset.t);
+        if(t) t.hidden = !t.hidden;
+      });
+    });
   }
 
   function renderHistory(){
