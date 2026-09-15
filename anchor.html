@@ -113,7 +113,7 @@ section{margin-top:24px}
 .cell.future{opacity:.3;cursor:default}
 body.readonly .chk,body.readonly .glass,body.readonly #suppBox .pill,
 body.readonly #restToggle,body.readonly #partSwap,body.readonly .infield input,
-body.readonly #saveWeight{pointer-events:none;opacity:.55}
+body.readonly #saveWeight,body.readonly #injDone{pointer-events:none;opacity:.55}
 
 /* 활동 소모 */
 .burn{margin-top:13px;padding:13px;border-radius:11px;background:var(--surface-2);border:1px solid var(--line)}
@@ -286,6 +286,11 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
         </div>
       </div>
 
+      <div id="injBanner" hidden style="margin-top:12px;padding:10px 12px;border-radius:9px;background:rgba(138,168,200,.1);border:1px solid rgba(138,168,200,.3);display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <div style="font-size:13px;color:#B9CDE0;line-height:1.5"><b style="color:var(--sun)">마운자로 5mg</b><br><span id="injText">—</span></div>
+        <button class="pill" type="button" id="injDone" style="padding:9px 14px;white-space:nowrap">오늘 맞았다</button>
+      </div>
+
       <div class="warn" id="restBanner" hidden style="margin-top:12px;background:rgba(138,168,200,.1);border-color:rgba(138,168,200,.3);color:#B9CDE0">
         <b style="color:var(--sun)">오늘은 휴식으로 선언했다.</b> 운동은 건너뛴다. 물과 무음주는 그대로.
       </div>
@@ -372,6 +377,16 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
         <div class="ro" id="roProtBox"><span class="k">단백질 <span style="color:var(--ink-dim);font-size:11px">/ 150g</span></span><span class="v" id="roProt">—</span></div>
       </div>
       <div class="warn" id="deficitWarn" hidden></div>
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
+        <div style="font-size:13px;color:var(--ink-dim);margin-bottom:8px">가정 혈압 (5분 앉은 뒤 · 수축기 / 확장기)</div>
+        <div class="inrow">
+          <div class="infield"><label>아침</label>
+            <div style="display:flex;gap:6px"><input type="number" id="bpAmS" inputmode="numeric" placeholder="120"><input type="number" id="bpAmD" inputmode="numeric" placeholder="80"></div></div>
+          <div class="infield"><label>저녁</label>
+            <div style="display:flex;gap:6px"><input type="number" id="bpPmS" inputmode="numeric" placeholder="120"><input type="number" id="bpPmD" inputmode="numeric" placeholder="80"></div></div>
+        </div>
+        <div class="warn" id="bpWarn" hidden></div>
+      </div>
       <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
         <div style="font-size:13px;color:var(--ink-dim);margin-bottom:8px">주간 체성분 (월요일 아침 공복)</div>
         <div class="inrow" id="compInputs">
@@ -637,10 +652,15 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
     <tr><td>골프연습</td><td class="num">주 2회 · 1.5시간</td></tr>
     <tr><td>식후 걷기</td><td class="num">40분</td></tr>
     <tr><td>공복 체중</td><td class="num">월요일 아침 · 동일 조건</td></tr>
+    <tr><td>마운자로</td><td class="num">5mg · 8일 간격 · 2026-09-15 재개</td></tr>
+    <tr><td>가정 혈압</td><td class="num">아침 기상 후 · 취침 전 (5분 안정 후)</td></tr>
   </table>
   <div class="warn" style="margin-top:11px">
     회식이 있는 날은 <b>출발 전 랩노쉬 1병.</b> 늦게 끝났으면 +14시간으로 복구하되,
-    <b>첫 식사는 14시를 넘기지 않는다.</b>
+    <b>첫 식사는 14시를 넘기지 않는다.</b><br><br>
+    <b>마운자로 복용 중엔 단백질 150g이 더 어렵고 더 중요하다.</b> 랩노쉬 먼저, 닭가슴살은 남은 공간에.
+    기름진 식사 뒤 지방변이 보이면 그 식사가 소화 한계를 넘은 것 — 다음엔 양을 줄인다.<br><br>
+    <b>혈압 160/100(09-15, 계단 직후 측정)</b> — 내장지방 12Lv과 연결된다. 다음 처방 때 재측정.
   </div>
 </section>
 
@@ -650,15 +670,16 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
     <tr><th>시점</th><th>내용</th></tr>
     <tr><td>기상 공복</td><td class="num">물 500ml</td></tr>
     <tr><td>첫 식사 직전</td><td class="num">유산균</td></tr>
-    <tr><td>첫 식사 후</td><td class="num">밀크시슬 · 아마칼디 · 비타민C 3,000mg · 피크노제놀 · 베르베린 · 크레아틴</td></tr>
+    <tr><td>첫 식사 후</td><td class="num">밀크시슬 · 아마칼디 · 비타민C 3,000mg · 피크노제놀 · 크레아틴</td></tr>
     <tr><td>두 번째 식사 후</td><td class="num">오메가3 · 비타민B · MSM · 마데카솔 · 크레아틴</td></tr>
-    <tr><td>취침 전</td><td class="num">잔티젠</td></tr>
   </table>
   <div class="warn" style="margin-top:11px">
-    공복혈당 107 상태이므로 다음 검진에서 <b>공복혈당 · 당화혈색소 · 간수치</b>를 확인한다.<br><br>
-    <b>베르베린(Berbevis 피토솜 550mg)은 첫 2주 1정.</b> 일반 베르베린보다 흡수율이 높아
-    500mg씩 여러 번 먹는 용법을 그대로 쓰면 안 된다. 설사·복부팽만이 없으면 2정으로 늘린다.
-    비타민C 3,000mg은 물 3L와 함께.
+    <b>마운자로 재개(2026-09-15)로 베르베린·잔티젠 중단.</b>
+    베르베린은 혈당 기전과 위장 부작용이 마운자로와 겹치고, 잔티젠은 역할이 없어진다.
+    비타민C 3,000mg은 물에 충분히 타서 마신다 — 원액을 빈속에 넘기지 않는다.<br><br>
+    <b>크레아틴 ×2는 절대 빼지 않는다.</b> SURMOUNT-1에서 감량분의 25.7%가 제지방이었다.
+    골격근 37.4kg(InBody 09-15)을 지키는 게 이번 재개의 조건이다.<br><br>
+    다음 검진에서 <b>공복혈당 · 당화혈색소 · 간수치</b>를 확인한다.
   </div>
 </section>
 
@@ -682,6 +703,20 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
       <thead><tr><th>활동</th><th>이번 주</th><th>소모</th></tr></thead>
       <tbody id="wActBody"></tbody>
     </table>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>혈압 · 최근 14일</h2><span>BP</span></div>
+    <table>
+      <thead><tr><th>날짜</th><th>아침</th><th>저녁</th></tr></thead>
+      <tbody id="bpBody"><tr><td colspan="3" style="color:var(--ink-dim)">아직 기록이 없습니다.</td></tr></tbody>
+    </table>
+    <div class="hint" style="margin-top:7px">140/90 이상은 빨강. 다음 처방 때 원장님께 보여드릴 데이터다.</div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>주사 이력</h2><span id="injNext">—</span></div>
+    <div class="card" id="injList" style="font-family:var(--mono);font-size:12.5px;color:var(--ink-dim);line-height:1.9">—</div>
   </section>
 
   <section>
@@ -761,7 +796,7 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
   "use strict";
   var KEY = 'shower_anchor_v1';
   var DOW = ['일','월','화','수','목','금','토'];
-  var SUPP_TOTAL = 14;   // 영양제 항목 총 개수 (SUPP 정의와 일치)
+  var SUPP_TOTAL = 12;   // 영양제 항목 총 개수 (SUPP 정의와 일치)
   var CAL_DOW = ['월','화','수','목','금','토','일'];
   // 요일별 덤벨 배정: 0=일 휴식, 1/3/5=상체, 2/4/6=하체
   // 요일 고정 없음. 마지막으로 수행한 덤벨 세션의 반대가 다음 차례가 된다.
@@ -812,10 +847,12 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
     if(!o.days) o.days = {};
     if(!o.settings) o.settings = {};
     if(!o.weights) o.weights = {};
+    // 마운자로 주사 이력 — 2026-09-15 5mg 재개, 8일 간격
+    if(!o.inj) o.inj = {interval:8, dose:'5mg', dates:['2026-09-15']};
     // CLA 중단(2026-09-07)에 따른 레거시 키 정리 — 과거 기록도 14개 기준으로 재계산된다
     Object.keys(o.days).forEach(function(k){
       var sp = o.days[k] && o.days[k].supp;
-      if(sp){ delete sp.cla1; delete sp.cla2; }
+      if(sp){ delete sp.cla1; delete sp.cla2; delete sp.bb; delete sp.xg; }  // 베르베린·잔티젠은 마운자로 재개(09-15)로 중단
     });
     return o;
   }
@@ -829,6 +866,7 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
   function pad(n){ return n < 10 ? '0'+n : ''+n; }
   function day(k){
     if(!db.days[k]) db.days[k] = {circuit:false, dumbbell:false, round:false, range:false, drink:false, water:0, supp:{}, rest:false, part:null, kcal:null, prot:null};
+    if(!db.days[k].bp) db.days[k].bp = {};
     return db.days[k];
   }
   function has(k){ return Object.prototype.hasOwnProperty.call(db.days, k); }
@@ -891,10 +929,9 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
     {t:'기상 공복', items:[['w','물 500ml']]},
     {t:'첫 식사 직전', items:[['pb','유산균']]},
     {t:'첫 식사 후', items:[['ms','밀크시슬'],['ca','아마칼디'],['vc','비타민C 3,000'],
-                          ['pyc','피크노제놀'],['bb','베르베린'],['cr1','크레아틴']]},
+                          ['pyc','피크노제놀'],['cr1','크레아틴']]},
     {t:'두 번째 식사 후', items:[['o3','오메가3'],['vb','비타민B'],['msm','MSM'],
-                              ['md','마데카솔'],['cr2','크레아틴']]},
-    {t:'취침 전', items:[['xg','잔티젠']]}
+                              ['md','마데카솔'],['cr2','크레아틴']]}
   ];
 
   (function buildSupp(){
@@ -1204,6 +1241,99 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
     document.getElementById('aDays').textContent = n;
   }
 
+  // ── 마운자로 주사 ─────────────────────────────────────
+  function injLast(){ var ds = db.inj.dates.slice().sort(); return ds.length ? ds[ds.length-1] : null; }
+  function injNextDate(){
+    var l = injLast(); if(!l) return null;
+    var d = new Date(l + 'T00:00:00'); d.setDate(d.getDate() + db.inj.interval); return d;
+  }
+  function renderInj(){
+    var box = document.getElementById('injBanner'), txt = document.getElementById('injText'), btn = document.getElementById('injDone');
+    var isToday = daysAgo(viewDate) === 0;
+    box.hidden = !isToday;
+    if(!isToday) return;
+    var todayK = key(new Date());
+    var next = injNextDate();
+    if(db.inj.dates.indexOf(todayK) >= 0){
+      txt.innerHTML = '<b style="color:var(--ok)">오늘 맞았다.</b> 다음은 ' + fmtMD(next);
+      btn.hidden = true; return;
+    }
+    btn.hidden = false;
+    if(!next){ txt.textContent = '첫 주사일을 기록한다'; return; }
+    var diff = Math.round((next - new Date(todayK + 'T00:00:00')) / 86400000);
+    if(diff > 0)       txt.innerHTML = '다음 주사 ' + fmtMD(next) + ' · <b style="color:var(--sun)">D-' + diff + '</b>';
+    else if(diff === 0) txt.innerHTML = '<b style="color:var(--stop)">오늘이 주사일이다.</b>';
+    else               txt.innerHTML = '<b style="color:var(--stop)">' + (-diff) + '일 지났다.</b> 예정 ' + fmtMD(next);
+  }
+  function fmtMD(d){ if(!d) return '—'; return (d.getMonth()+1) + '/' + d.getDate() + '(' + DOW[d.getDay()] + ')'; }
+  document.getElementById('injDone').addEventListener('click', function(){
+    if(!editable()) return;
+    var k = key(new Date());
+    if(db.inj.dates.indexOf(k) < 0) db.inj.dates.push(k);
+    save(); renderInj(); renderInjList();
+  });
+  function renderInjList(){
+    var el = document.getElementById('injList'), nx = document.getElementById('injNext');
+    var ds = db.inj.dates.slice().sort().reverse();
+    var next = injNextDate();
+    nx.textContent = next ? '다음 ' + fmtMD(next) : '—';
+    if(!ds.length){ el.textContent = '아직 기록이 없습니다.'; return; }
+    el.innerHTML = ds.slice(0,12).map(function(k, i){
+      var d = new Date(k + 'T00:00:00');
+      var gap = '';
+      if(i < ds.length-1){
+        var prev = new Date(ds[i+1] + 'T00:00:00');
+        var g = Math.round((d - prev)/86400000);
+        gap = ' <span style="color:' + (g === db.inj.interval ? 'var(--ink-dim)' : 'var(--sun)') + '">(+' + g + '일)</span>';
+      }
+      return (i === 0 ? '<b style="color:var(--ink)">' : '') + fmtMD(d) + ' · ' + db.inj.dose + (i === 0 ? '</b>' : '') + gap;
+    }).join('<br>');
+  }
+
+  // ── 혈압 ──────────────────────────────────────────────
+  var BP_IDS = {bpAmS:['am',0], bpAmD:['am',1], bpPmS:['pm',0], bpPmD:['pm',1]};
+  Object.keys(BP_IDS).forEach(function(id){
+    document.getElementById(id).addEventListener('input', function(){
+      if(!editable()) return;
+      var d = day(key(curDate())), slot = BP_IDS[id][0], idx = BP_IDS[id][1];
+      if(!d.bp[slot]) d.bp[slot] = [null, null];
+      var v = this.value === '' ? null : parseInt(this.value, 10);
+      d.bp[slot][idx] = (v === null || isNaN(v)) ? null : Math.max(0, Math.min(300, v));
+      if(d.bp[slot][0] === null && d.bp[slot][1] === null) delete d.bp[slot];
+      save(); renderBP();
+    });
+  });
+  function bpHigh(p){ return p && p[0] !== null && p[1] !== null && (p[0] >= 140 || p[1] >= 90); }
+  function bpStr(p){ return (p && p[0] !== null && p[1] !== null) ? p[0] + '/' + p[1] : '—'; }
+  function renderBP(){
+    var d = day(key(curDate()));
+    ['am','pm'].forEach(function(slot){
+      var p = d.bp[slot] || [null, null];
+      var sEl = document.getElementById(slot === 'am' ? 'bpAmS' : 'bpPmS'), dEl = document.getElementById(slot === 'am' ? 'bpAmD' : 'bpPmD');
+      if(document.activeElement !== sEl) sEl.value = p[0] === null ? '' : p[0];
+      if(document.activeElement !== dEl) dEl.value = p[1] === null ? '' : p[1];
+    });
+    var w = document.getElementById('bpWarn');
+    var hi = bpHigh(d.bp.am) || bpHigh(d.bp.pm);
+    w.hidden = !hi;
+    if(hi) w.innerHTML = '<b>140/90 이상.</b> 5분 더 앉았다가 한 번 더 잰다. 오늘 나트륨·카페인·음주를 돌아본다.';
+  }
+  function renderBPHist(){
+    var body = document.getElementById('bpBody');
+    var rows = [], c = new Date(); c.setHours(0,0,0,0);
+    for(var i = 0; i < 14; i++){
+      var k = key(c), d = db.days[k];
+      if(d && d.bp && (d.bp.am || d.bp.pm)){
+        var col = function(p){ return bpHigh(p) ? 'color:var(--stop);font-weight:600' : ''; };
+        rows.push('<tr><td>' + (c.getMonth()+1) + '/' + c.getDate() + '(' + DOW[c.getDay()] + ')</td>' +
+          '<td class="num" style="' + col(d.bp.am) + '">' + bpStr(d.bp.am) + '</td>' +
+          '<td class="num" style="' + col(d.bp.pm) + '">' + bpStr(d.bp.pm) + '</td></tr>');
+      }
+      c.setDate(c.getDate()-1);
+    }
+    body.innerHTML = rows.length ? rows.join('') : '<tr><td colspan="3" style="color:var(--ink-dim)">아직 기록이 없습니다.</td></tr>';
+  }
+
   function renderToday(){
     var now = curDate(), k = key(now), d = day(k), wd = now.getDay();
     document.getElementById('todayDate').textContent = (now.getMonth()+1) + '월 ' + now.getDate() + '일';
@@ -1221,6 +1351,7 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
       ? '오늘은 <b>휴식</b>. 영양제 · 물 · 무음주만 챙긴다'
       : '오늘 차례는 <b>' + label + '</b>';
 
+    renderInj(); renderBP();
     document.getElementById('restBanner').hidden = !rest;
     document.getElementById('restToggle').dataset.on = rest ? '1' : '0';
     document.getElementById('partSwap').textContent =
@@ -1401,6 +1532,8 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);
     renderPeriods();
     renderAverages();
     renderWeekly();
+    renderBPHist();
+    renderInjList();
     renderHistory();
   }
 
