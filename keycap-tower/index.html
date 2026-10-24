@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>키캡 타워: 딸깍 등반</title>
+<meta name="description" content="키캡 계단을 딸깍딸깍 밟고 정상까지 오르는 3D 등반 게임">
+<meta name="theme-color" content="#7ec3ff">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<link rel="stylesheet" href="./style.css">
+<!-- Three.js는 CDN에서 버전 고정으로 로드 (빌드 도구 없음) -->
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js" } }
+</script>
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js" crossorigin>
+</head>
+<body>
+<canvas id="c"></canvas>
+<!-- 터치 입력 레이어: 조이스틱·카메라 회전 -->
+<div id="touch"></div>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="chips">
+    <div class="chip"><span class="ic">⬆</span><b id="hHeight">0</b><small>m</small></div>
+    <div class="chip"><span class="ic">🏁</span><b id="hStage">1/10</b></div>
+    <div class="chip"><span class="ic">⏱</span><b id="hTime">00:00.0</b></div>
+    <div class="chip"><span class="ic">💥</span><b id="hFalls">0</b></div>
+  </div>
+  <div class="hbtns">
+    <button id="btnPause" class="hbtn" aria-label="일시정지">⏸</button>
+    <button id="btnRestartHud" class="hbtn" aria-label="처음부터">↺</button>
+  </div>
+</div>
+
+<div id="joyHint"><span>이동</span></div>
+<div id="joy"><div id="joyKnob"></div></div>
+<button id="jump" aria-label="점프"><span>점프</span></button>
+
+<div id="fade"></div>
+<div id="toast"></div>
+
+<!-- 시작 화면 -->
+<div id="titleMenu" class="overlay">
+  <div class="card">
+    <div class="logo"><span class="kc">키</span><span class="kc">캡</span><span class="kc wide">타워</span></div>
+    <h1>키캡 타워: 딸깍 등반</h1>
+    <p class="sub">키캡 계단을 딸깍딸깍 밟고 10스테이지 정상까지!</p>
+    <button id="btnContinue" class="big" style="display:none">▶ 이어하기</button>
+    <button id="btnNew" class="big primary">새로 시작</button>
+    <p id="titleBest" class="best"></p>
+    <ul class="howto">
+      <li>🕹️ 왼쪽 아래를 끌어서 <b>이동</b></li>
+      <li>⤴️ 오른쪽 아래 버튼으로 <b>점프</b></li>
+      <li>👆 화면 나머지 부분을 끌어서 <b>시점 회전</b></li>
+      <li>🟩 스페이스바를 밟으면 <b>체크포인트</b> 저장</li>
+    </ul>
+    <button class="btnInstall small" style="display:none">📲 홈 화면에 설치</button>
+  </div>
+</div>
+
+<!-- 일시정지 -->
+<div id="pauseMenu" class="overlay">
+  <div class="card">
+    <h2>⏸ 일시정지</h2>
+    <button id="btnResume" class="big primary">계속하기</button>
+    <button id="btnRestart" class="big">처음부터</button>
+    <button id="btnSound" class="big">🔊 소리 끄기</button>
+    <button id="btnRemeasure" class="big">그래픽 재측정</button>
+    <p class="sub">현재 그래픽: <b id="qualityName">높음</b></p>
+    <button class="btnInstall small" style="display:none">📲 홈 화면에 설치</button>
+  </div>
+</div>
+
+<!-- 처음부터 확인 -->
+<div id="confirmMenu" class="overlay">
+  <div class="card">
+    <h2>처음부터 시작할까요?</h2>
+    <p class="sub">저장된 체크포인트와 시간이 초기화됩니다.</p>
+    <button id="btnConfirmYes" class="big primary">네, 처음부터</button>
+    <button id="btnConfirmNo" class="big">아니요</button>
+  </div>
+</div>
+
+<!-- 클리어 -->
+<div id="clearMenu" class="overlay">
+  <div class="card">
+    <h2>🎉 정상 도착!</h2>
+    <p id="clearNew" class="newrec">🏆 신기록!</p>
+    <table class="rec">
+      <tr><th>기록</th><td id="clearTime">-</td></tr>
+      <tr><th>낙하</th><td id="clearFalls">-</td></tr>
+      <tr><th>최고 기록</th><td id="clearBest">-</td></tr>
+    </table>
+    <button id="btnAgain" class="big primary">다시 도전</button>
+  </div>
+</div>
+
+<div id="loading">키캡 타워 불러오는 중…<br><small id="loadErr"></small></div>
+<script>
+  // 모듈 로드 실패(오프라인 첫 실행 등) 시 안내
+  window.addEventListener('error', function (e) {
+    var el = document.getElementById('loadErr');
+    if (el) el.textContent = '불러오기 실패: 인터넷 연결을 확인한 뒤 새로고침 해주세요.';
+  }, true);
+</script>
+<script type="module" src="./js/main.js"></script>
+</body>
+</html>
