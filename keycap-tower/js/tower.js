@@ -65,6 +65,27 @@ function groundTexture() {
   return t;
 }
 
+// 통로 벽 텍스처: 연한 판 위에 키캡 자국 무늬 (4m × 4m 반복)
+function wallTexture() {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 256;
+  const g = cv.getContext('2d');
+  g.fillStyle = '#c9d3ec'; g.fillRect(0, 0, 256, 256);
+  const cell = 64;
+  for (let y = 0; y < 4; y++) {
+    for (let x = 0; x < 4; x++) {
+      g.fillStyle = (x + y) % 2 ? '#bcc7e4' : '#c3cde8';
+      g.beginPath(); g.roundRect(x * cell + 6, y * cell + 6, cell - 12, cell - 12, 10); g.fill();
+    }
+  }
+  g.fillStyle = 'rgba(80,95,140,0.18)'; g.fillRect(0, 126, 256, 4);   // 가로 줄눈
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = 4;
+  return t;
+}
+
 // 스테이지 표지 스프라이트
 function labelSprite(text, color) {
   const cv = document.createElement('canvas');
@@ -179,6 +200,49 @@ export class TowerView {
     );
     this.star.position.set(goal.x, goal.top + 4.2, goal.z);
     this.group.add(this.star);
+
+    // 네모 통로 벽: 키보드 판 무늬, 벽마다 따로 반투명 전환
+    this.walls = [];
+    if (tower.view && tower.view.kind === 'shaft') {
+      const base = wallTexture();
+      for (const w of tower.statics) {
+        const alongX = w.hx > w.hz;                  // 남·북 벽(가로로 긴 벽)
+        const len = 2 * (alongX ? w.hx : w.hz);
+        const tex = base.clone();
+        tex.needsUpdate = true;
+        tex.repeat.set(len / 4, w.h / 4);
+        // 벽은 화면 대부분을 덮어 픽셀 비용이 크므로 조명 계산 없는 Basic 재질을 쓰고,
+        // 태양 방향(+x, +z 쪽 위)을 기준으로 벽 방향별 밝기만 다르게 해 입체감을 낸다.
+        // (헤드리스 측정: 표준 재질 대비 벽 렌더 비용 약 1/6, 대신 벽에 키캡 그림자는 맺히지 않음)
+        const axis = alongX ? 'z' : 'x';
+        const out = Math.sign(alongX ? w.z : w.x);
+        const sunDot = -out * (alongX ? 0.55 : 0.83);    // 안쪽 면 법선(-out)과 태양 수평 방향의 내적
+        const mat = new THREE.MeshBasicMaterial({
+          map: tex, transparent: true, opacity: 1,
+          color: new THREE.Color().setScalar(0.82 + 0.13 * sunDot),
+        });
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(2 * w.hx, w.h, 2 * w.hz), mat);
+        mesh.position.set(w.x, w.top - w.h / 2, w.z);
+        this.group.add(mesh);
+        // 안쪽 면 위치와 바깥 방향 (카메라가 이 면 바깥에 있으면 벽이 가린다고 판단)
+        const face = (alongX ? w.z : w.x) - out * (alongX ? w.hz : w.hx);
+        this.walls.push({ mesh, mat, axis, out, face, opacity: 1 });
+      }
+    }
+  }
+
+  // 카메라가 벽 안쪽 면 바깥(또는 면 위)에 있으면 그 벽만 반투명 (그 외에는 불투명)
+  updateWalls(dt, cam) {
+    const k = 1 - Math.exp(-dt * 10);
+    for (const w of this.walls) {
+      const beyond = (cam[w.axis] - w.face) * w.out > -0.15;
+      const want = beyond ? 0.3 : 1;
+      w.opacity += (want - w.opacity) * k;
+      if (Math.abs(w.opacity - want) < 0.01) w.opacity = want;
+      w.mat.opacity = w.opacity;
+      w.mat.depthWrite = w.opacity > 0.99;
+      w.mesh.renderOrder = w.opacity < 1 ? 2 : 0;
+    }
   }
 
   setMatrix(mesh, i, b) {

@@ -81,5 +81,30 @@ check('버퍼: 착지 0.2초 전 입력 → 무시', !bufferTrial(24));
   }
   check('움직이는 발판 동승 (상대 위치 유지)', p.grounded && off < 0.02, `오차=${off.toFixed(4)}`);
 }
+// 8) 통로 벽(고정 충돌체): 높은 곳에서도 항상 충돌, 모서리에 끼지 않음
+{
+  const H = 6.5, top = 200, h = 210;
+  const walls = [
+    { x: H + 0.5, z: 0, hx: 0.5, hz: H + 1, top, h, wall: true },
+    { x: -H - 0.5, z: 0, hx: 0.5, hz: H + 1, top, h, wall: true },
+    { x: 0, z: H + 0.5, hx: H + 1, hz: 0.5, top, h, wall: true },
+    { x: 0, z: -H - 0.5, hx: H + 1, hz: 0.5, top, h, wall: true },
+  ];
+  // 높이 150m 발판 위에서 동쪽 벽으로 달리기 → 벽 앞에서 멈춤
+  const w = createWorld([box(0, 150, 0, H, H)], walls);
+  const p = createPlayer(0, 150, 0); run(p, w, 2);
+  run(p, w, 200, { mx: 1, mz: 0, jumpPressed: false });
+  check('벽 충돌 (높이 150m)', Math.abs(p.x - (H - PLAYER_HW)) < 1e-3, `x=${p.x.toFixed(3)}`);
+  // 북동 모서리로 대각선 돌진 후 반대 방향으로 빠져나오기
+  run(p, w, 200, { mx: 0.7, mz: 0.7, jumpPressed: false });
+  const inCorner = Math.abs(p.x - (H - PLAYER_HW)) < 1e-3 && Math.abs(p.z - (H - PLAYER_HW)) < 1e-3;
+  run(p, w, 60, { mx: -0.7, mz: -0.7, jumpPressed: false });
+  check('모서리에 끼지 않고 빠져나옴', inCorner && p.x < H - 2 && p.z < H - 2, `x=${p.x.toFixed(2)} z=${p.z.toFixed(2)}`);
+  // 벽에 붙은 채 점프해도 벽에 걸리지 않고 정상 높이까지 올라감
+  run(p, w, 200, { mx: 1, mz: 0, jumpPressed: false });
+  stepPlayer(p, { mx: 1, mz: 0, jumpPressed: true }, w, FIXED_DT);
+  let maxY = 0; for (let i = 0; i < 120; i++) { stepPlayer(p, { mx: 1, mz: 0, jumpPressed: false }, w, FIXED_DT); maxY = Math.max(maxY, p.y - 150); }
+  check('벽에 붙어 점프 (벽 마찰 없음)', Math.abs(maxY - JUMP_APEX) < 0.06 && p.grounded, `최고 ${maxY.toFixed(2)}m`);
+}
 console.log(fail ? `실패 ${fail}건` : '전체 통과');
 process.exit(fail ? 1 : 0);

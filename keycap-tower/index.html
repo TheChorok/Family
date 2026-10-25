@@ -43,6 +43,7 @@
 
 <div id="fade"></div>
 <div id="toast"></div>
+<div id="taunt" aria-live="polite"></div>
 
 <!-- 시작 화면 -->
 <div id="titleMenu" class="overlay">
@@ -53,6 +54,7 @@
     <button id="btnContinue" class="big" style="display:none">▶ 이어하기</button>
     <button id="btnNew" class="big primary">새로 시작</button>
     <p id="titleBest" class="best"></p>
+    <p id="titleLegacy" class="legacy" style="display:none"></p>
     <ul class="howto">
       <li>🕹️ 왼쪽 아래를 끌어서 <b>이동</b></li>
       <li>⤴️ 오른쪽 아래 버튼으로 <b>점프</b></li>
@@ -103,6 +105,7 @@
       <tr><th>기록</th><td id="clearTime">-</td></tr>
       <tr><th>낙하</th><td id="clearFalls">-</td></tr>
       <tr><th>최고 기록</th><td id="clearBest">-</td></tr>
+      <tr id="clearLegacyRow" class="legacy" style="display:none"><th>이전 탑 기록</th><td id="clearLegacy">-</td></tr>
     </table>
     <button id="btnAgain" class="big primary">다시 도전</button>
   </div>

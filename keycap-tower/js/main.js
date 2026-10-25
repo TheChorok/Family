@@ -13,6 +13,9 @@ import { Hud, showOverlay, formatTime } from './hud.js';
 
 const $ = (id) => document.getElementById(id);
 const FALL_DIST = 12;      // 마지막 체크포인트보다 이만큼 아래로 떨어지면 부활
+const FALL_TIME = 1.5;     // 이만큼 넘게 계속 떨어지면 바닥에 닿기 전이라도 부활 (통로 가운데 낙하 지루함 방지)
+const RUN_VERSION = 2;     // 저장 형식 버전 (2 = 네모 통로 탑). 다른 버전·형태의 진행은 이어하지 않음
+const TAUNT_COOLDOWN = 10; // 놀림 팝업 최소 간격(초)
 const MAX_STEPS = 12;      // 프레임당 최대 물리 스텝 (느린 프레임에서 폭주 방지)
 
 // ── 렌더러 / 씬 ──
@@ -20,16 +23,9 @@ const canvas = $('c');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
 renderer.shadowMap.type = THREE.PCFShadowMap;
 const scene = new THREE.Scene();
-const SKY_TOP = '#7ec3ff', SKY_BOTTOM = '#ffe3f0';
-{
-  const cv = document.createElement('canvas'); cv.width = 2; cv.height = 256;
-  const g = cv.getContext('2d');
-  const gr = g.createLinearGradient(0, 0, 0, 256);
-  gr.addColorStop(0, SKY_TOP); gr.addColorStop(1, SKY_BOTTOM);
-  g.fillStyle = gr; g.fillRect(0, 0, 2, 256);
-  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
-  scene.background = t;
-}
+// 하늘은 단색 배경(화면 지우기 색)으로 처리: 그라데이션 텍스처 배경은 매 프레임 화면 전체를 한 번 더 그려
+// 통로 벽과 겹쳐 픽셀 비용이 크다 (헤드리스 측정: 저사양 단계에서 프레임당 약 10ms 차이)
+scene.background = new THREE.Color(0x9fd0ff);
 scene.fog = new THREE.Fog(0xdbe7ff, 40, 120);
 const camera = new THREE.PerspectiveCamera(62, 1, 0.1, 260);
 
@@ -44,10 +40,19 @@ scene.add(sun, sun.target);
 
 // ── 월드 ──
 const tower = generateTower();
-const world = createWorld(tower.boxes);
+const world = createWorld(tower.boxes, tower.statics);
+const BEST_KEY = 'best_' + tower.shape;          // 탑 형태별 최고 기록 (나선 시절 기록은 best_spiral)
+const LEGACY_BEST_KEY = 'best_spiral';
+// 1단계(나선) 최고 기록 'best' → '이전 탑 기록'으로 옮겨 보관
+{
+  const old = store.load('best', null);
+  if (old && !store.load(LEGACY_BEST_KEY, null)) store.save(LEGACY_BEST_KEY, old);
+  if (old) store.remove('best');
+}
 const towerView = new TowerView(scene, tower);
 const playerView = new PlayerView(scene);
 const follow = new FollowCamera(camera);
+follow.setView(tower.view);
 const hud = new Hud();
 const input = new Input({ layer: $('touch'), joyBase: $('joy'), joyKnob: $('joyKnob'), jumpBtn: $('jump') });
 
@@ -92,21 +97,29 @@ const run = { cp: 0, time: 0, falls: 0 };
 const player = createPlayer(0, 0, 0);
 let simTime = 0;
 let acc = 0;
+let fallT = 0;          // 연속 낙하 시간
+let leaveY = 0;         // 마지막으로 발판을 떠난 높이
 
 function saveRun() {
-  store.save('run', { v: 1, cp: run.cp, time: Math.round(run.time * 1000) / 1000, falls: run.falls });
+  store.save('run', { v: RUN_VERSION, shape: tower.shape, cp: run.cp, time: Math.round(run.time * 1000) / 1000, falls: run.falls });
+}
+// 현재 탑에서 이어할 수 있는 저장인지 (예전 나선 버전 진행은 새로 시작)
+function validRun(saved) {
+  return saved && saved.v === RUN_VERSION && saved.shape === tower.shape;
 }
 
 function placeAtCheckpoint(index) {
   const cp = tower.checkpoints[index];
   Object.assign(player, createPlayer(cp.x, cp.y + 0.05, cp.z));
   playerView.yaw = cp.yaw;
-  follow.setBehind(cp.yaw);
+  follow.setBehind(cp.yaw, cp.normal);
+  fallT = 0;
+  leaveY = cp.y;
 }
 
 function startRun(cont) {
   const saved = cont ? store.load('run', null) : null;
-  if (saved && saved.v === 1) {
+  if (validRun(saved)) {
     run.cp = Math.min(STAGES - 1, Math.max(0, saved.cp | 0));
     run.time = +saved.time || 0;     // 저장된 누적 플레이 시간부터 타이머 이어서 진행
     run.falls = saved.falls | 0;
@@ -160,14 +173,17 @@ function onClear() {
   input.reset();
   releaseWakeLock();
   audio.playClear();
-  const best = store.load('best', null);
+  const best = store.load(BEST_KEY, null);
   const isNew = !best || run.time < best.time;
-  if (isNew) store.save('best', { time: run.time, falls: run.falls, at: Date.now() });
+  if (isNew) store.save(BEST_KEY, { time: run.time, falls: run.falls, at: Date.now() });
   store.remove('run');
   $('clearTime').textContent = formatTime(run.time);
   $('clearFalls').textContent = `${run.falls}회`;
   const b = isNew ? { time: run.time, falls: run.falls } : best;
   $('clearBest').textContent = `${formatTime(b.time)} (낙하 ${b.falls}회)`;
+  const legacy = store.load(LEGACY_BEST_KEY, null);
+  $('clearLegacyRow').style.display = legacy ? '' : 'none';
+  if (legacy) $('clearLegacy').textContent = `${formatTime(legacy.time)} (낙하 ${legacy.falls}회)`;
   $('clearNew').style.display = isNew ? '' : 'none';
   showOverlay('clearMenu');
 }
@@ -176,8 +192,38 @@ function onFall() {
   run.falls++;
   audio.playFall();
   respawnT = 0.55;
+  tauntAfterRespawn = true;
   hud.fade(true);
 }
+
+// ── 놀림 팝업 ──
+const TAUNTS = [
+  '또 제자리야? ㅋㅋㅋㅋ 긁? ㅋㅋㅋㅋ',
+  '중력이 너 좋아하나 봐 ㅋㅋ',
+  '키캡이 미끄러웠던 거지? 그치?',
+  '방금 그거 연습이었지? ㅎㅎ',
+  '다시 올라가면 되지 뭐~ 딸깍!',
+  '엘리베이터 타고 내려오셨어요?',
+  '괜찮아, 아무도 못 봤어… 아마도 ㅋ',
+];
+let tauntAfterRespawn = false;
+let lastTauntAt = -Infinity;
+let lastTauntIdx = -1;
+function taunt() {
+  const now = performance.now() / 1000;
+  if (now - lastTauntAt < TAUNT_COOLDOWN) return;   // 연속 표시 방지
+  lastTauntAt = now;
+  let i;
+  do { i = Math.floor(Math.random() * TAUNTS.length); } while (i === lastTauntIdx && TAUNTS.length > 1);
+  lastTauntIdx = i;
+  hud.taunt(TAUNTS[i]);
+}
+// 현재 스테이지 한 층 높이 (이만큼 이상 떨어져 착지하면 놀림)
+function stageHeight() {
+  const s = Math.min(STAGES, run.cp + 1);
+  return tower.checkpoints[s].y - tower.checkpoints[s - 1].y;
+}
+
 
 // ── 메인 루프 ──
 let lastT = performance.now();
@@ -201,7 +247,10 @@ function frame(now) {
         placeAtCheckpoint(run.cp);
         player._respawned = true;
       }
-      if (respawnT <= 0) { respawnT = 0; hud.fade(false); }
+      if (respawnT <= 0) {
+        respawnT = 0; hud.fade(false);
+        if (tauntAfterRespawn) { tauntAfterRespawn = false; taunt(); }   // 부활 직후 놀림
+      }
       updateMovers(world, simTime);
     } else {
       const mv = input.getMove();
@@ -211,7 +260,10 @@ function frame(now) {
       let steps = 0;
       while (acc >= FIXED_DT && steps < MAX_STEPS) {
         updateMovers(world, simTime);
+        const wasGrounded = player.grounded;
         const ev = stepPlayer(player, { mx: dir.x, mz: dir.z, jumpPressed: jump }, world, FIXED_DT);
+        if (wasGrounded && !player.grounded) leaveY = player.y;
+        fallT = !player.grounded && player.vy < 0 ? fallT + FIXED_DT : 0;
         jump = false;
         simTime += FIXED_DT;
         acc -= FIXED_DT;
@@ -223,12 +275,14 @@ function frame(now) {
           const strength = Math.min(1, ev.landSpeed / 16);
           audio.playKey(kind, strength);
           playerView.onLand(strength);
+          if (leaveY - player.y >= stageHeight()) taunt();   // 한 번에 1스테이지 이상 떨어짐
           if (b === tower.goal) { onClear(); break; }
           if (b.cpIndex) onCheckpoint(b.cpIndex);
         }
         // 낙하 판정
         const cp = tower.checkpoints[run.cp];
-        if (player.y < cp.y - FALL_DIST || (run.cp > 0 && player.grounded && player.groundBox === tower.boxes[0])) {
+        if (player.y < cp.y - FALL_DIST || fallT > FALL_TIME ||
+          (run.cp > 0 && player.grounded && player.groundBox === tower.boxes[0])) {
           player._respawned = false;
           onFall();
           break;
@@ -250,7 +304,8 @@ function frame(now) {
 
   towerView.update(dt);
   playerView.update(dt, player, world);
-  follow.update(dt, player, world);
+  follow.update(dt, player, world, state === 'title');
+  towerView.updateWalls(dt, camera.position);
   // 그림자용 태양광은 캐릭터를 따라다님
   sun.position.set(player.x + 12, player.y + 26, player.z + 8);
   sun.target.position.set(player.x, player.y, player.z);
@@ -361,11 +416,15 @@ for (const b of document.querySelectorAll('.btnInstall')) {
 // ── 타이틀 화면 정보 ──
 function refreshTitle() {
   const saved = store.load('run', null);
-  const canContinue = saved && saved.v === 1 && (saved.cp > 0 || saved.time > 5);
+  if (saved && !validRun(saved)) store.remove('run');   // 예전 나선 탑 진행은 새로 시작
+  const canContinue = validRun(saved) && (saved.cp > 0 || saved.time > 5);
   $('btnContinue').style.display = canContinue ? '' : 'none';
   if (canContinue) $('btnContinue').textContent = `▶ 이어하기 (스테이지 ${Math.min(STAGES, (saved.cp | 0) + 1)} · ${formatTime(saved.time)})`;
-  const best = store.load('best', null);
+  const best = store.load(BEST_KEY, null);
   $('titleBest').textContent = best ? `🏆 최고 기록 ${formatTime(best.time)} · 낙하 ${best.falls}회` : '🏆 최고 기록 없음 — 첫 등반에 도전!';
+  const legacy = store.load(LEGACY_BEST_KEY, null);
+  $('titleLegacy').style.display = legacy ? '' : 'none';
+  if (legacy) $('titleLegacy').textContent = `이전 탑(나선) 기록 ${formatTime(legacy.time)} · 낙하 ${legacy.falls}회`;
 }
 refreshTitle();
 placeAtCheckpoint(0);
@@ -383,4 +442,4 @@ if ('serviceWorker' in navigator) {
 }
 
 // 테스트·디버그용 핸들 (자동화 검증에서 사용)
-window.__kt = { tower, world, player, run, get state() { return state; }, quality, audio, follow, input, onFall, placeAtCheckpoint };
+window.__kt = { tower, world, player, run, get state() { return state; }, quality, audio, follow, input, onFall, placeAtCheckpoint, scene, camera, towerView, playerView };
