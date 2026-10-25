@@ -69,7 +69,15 @@
     <h2>⏸ 일시정지</h2>
     <button id="btnResume" class="big primary">계속하기</button>
     <button id="btnRestart" class="big">처음부터</button>
-    <button id="btnSound" class="big">🔊 소리 끄기</button>
+    <div class="vol">
+      <p class="sub">🔊 효과음 볼륨</p>
+      <div class="seg" id="volSeg" role="radiogroup" aria-label="효과음 볼륨">
+        <button data-vol="0" role="radio">끄기</button>
+        <button data-vol="1" role="radio">작게</button>
+        <button data-vol="2" role="radio">보통</button>
+        <button data-vol="3" role="radio">크게</button>
+      </div>
+    </div>
     <button id="btnRemeasure" class="big">그래픽 재측정</button>
     <p class="sub">현재 그래픽: <b id="qualityName">높음</b></p>
     <button class="btnInstall small" style="display:none">📲 홈 화면에 설치</button>
