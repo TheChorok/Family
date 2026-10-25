@@ -2,7 +2,7 @@
 // - html/js/css/json(같은 출처): 네트워크 우선 → 실패 시 캐시 (배포 즉시 최신 반영)
 // - Three.js CDN·아이콘 등: 캐시 우선 (버전 고정 URL이라 안전)
 // - 캐시 이름에 버전을 붙이고, 활성화 시 옛 버전 캐시 삭제
-const VERSION = 'v3'; // 배포마다 올려서 폰에 새 버전 반영 (v3: 네모 통로 탑)
+const VERSION = 'v4'; // 배포마다 올려서 폰에 새 버전 반영 (v4: 기능형 키캡·배경음악)
 const CACHE = `keycap-tower-${VERSION}`;
 const THREE_URL = 'https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js';
 const THREE_CORE = 'https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.core.js';
@@ -12,6 +12,7 @@ const SHELL = [
   './js/player.js', './js/camera.js', './js/input.js', './js/audio.js', './js/quality.js',
   './js/storage.js', './js/hud.js',
   './js/layout/core.js', './js/layout/shapes/spiral.js', './js/layout/shapes/shaft.js',
+  './js/gimmicks.js', './js/rules.js', './js/bgm.js', './data/tower-shaft.json',
   './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png',
 ];
 
