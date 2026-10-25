@@ -51,6 +51,30 @@ export class Hud {
     this.tauntTimer = setTimeout(() => t.classList.remove('show'), 2000);
   }
 
+  // 기믹 효과 남은 시간 표시: list = [{ cls, text }] (바뀔 때만 다시 그림)
+  effects(list) {
+    const key = list.map((e) => e.cls + e.text).join('|');
+    if (this.last.effects === key) return;
+    this.last.effects = key;
+    const el = $('effects');
+    el.textContent = '';
+    for (const e of list) {
+      const d = document.createElement('div');
+      d.className = 'fx ' + e.cls;
+      d.textContent = e.text;
+      el.appendChild(d);
+    }
+  }
+
+  // 화면 가운데 큰 경고 (방향 반전)
+  warn(msg) {
+    const w = $('warn');
+    w.textContent = msg;
+    w.classList.remove('show');
+    void w.offsetWidth;
+    w.classList.add('show');
+  }
+
   fade(on) {
     this.el.fade.classList.toggle('on', on);
   }

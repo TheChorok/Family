@@ -124,6 +124,46 @@ function keySound(kind, strength) {
   }
 }
 
+// 기믹 효과음: bounce(튕김), ice(유리 같은 딸깍), vanish(키캡 사라짐), small(작아짐), big(커짐),
+// sizeEnd(원래 크기), reverse(반전 경고), crumble(금 가는 소리)
+export function playGimmick(kind) {
+  if (!ready()) return;
+  const t = ctx.currentTime + 0.005;
+  switch (kind) {
+    case 'bounce':
+      tone(t, 0.28, 'sine', 180, 720, 0.35);
+      tone(t + 0.02, 0.2, 'triangle', 360, 1100, 0.12);
+      break;
+    case 'ice':
+      tone(t, 0.12, 'triangle', 2600, 2400, 0.16);
+      noise(t, 0.05, 'highpass', 6000, 0.7, 0.2);
+      break;
+    case 'crumble':
+      noise(t, 0.06, 'bandpass', 900, 2, 0.4);
+      noise(t + 0.05, 0.05, 'bandpass', 700, 2, 0.3);
+      break;
+    case 'vanish':
+      noise(t, 0.25, 'lowpass', 600, 0.7, 0.45);
+      tone(t, 0.3, 'sine', 300, 80, 0.2);
+      break;
+    case 'small':
+      tone(t, 0.35, 'square', 900, 300, 0.07);
+      break;
+    case 'big':
+      tone(t, 0.35, 'square', 250, 800, 0.07);
+      break;
+    case 'sizeEnd':
+      tone(t, 0.15, 'triangle', 600, 600, 0.12);
+      tone(t + 0.1, 0.18, 'triangle', 800, 800, 0.12);
+      break;
+    case 'reverse':
+      [0, 0.16, 0.32].forEach((d, i) => tone(t + d, 0.12, 'square', i % 2 ? 520 : 780, i % 2 ? 520 : 780, 0.08));
+      break;
+    default:
+      break;
+  }
+}
+
 export function playJump() {
   if (ready()) jumpSound();
 }

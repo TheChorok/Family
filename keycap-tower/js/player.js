@@ -80,6 +80,9 @@ export class PlayerView {
 
   update(dt, p, world) {
     this.root.position.set(p.x, p.y, p.z);
+    // '－'/'＋' 키캡 크기 변화: 충돌 크기(p.scale)를 부드럽게 따라감 (약 0.15초)
+    const cur = this.root.scale.x, want = p.scale || 1;
+    this.root.scale.setScalar(Math.abs(want - cur) < 0.002 ? want : cur + (want - cur) * Math.min(1, dt * 14));
     const sp = Math.hypot(p.vx, p.vz);
     // 이동 방향으로 부드럽게 회전
     if (sp > 0.3) {
@@ -110,13 +113,14 @@ export class PlayerView {
     let best = -Infinity;
     forEachNear(world, p.y - 40, p.y + 0.01, (b) => {
       if (b.top > p.y + 0.01) return;
+      if (b.off) return;
       if (Math.abs(p.x - b.x) < b.hx + PLAYER_HW * 0.3 && Math.abs(p.z - b.z) < b.hz + PLAYER_HW * 0.3 && b.top > best) best = b.top;
     });
     if (best > -Infinity) {
       const h = p.y - best;
       this.blob.visible = true;
       this.blob.position.set(p.x, best + 0.02, p.z);
-      const s = Math.max(0.35, 1 - h * 0.06);
+      const s = Math.max(0.35, 1 - h * 0.06) * (p.scale || 1);
       this.blob.scale.set(s, s, s);
       this.blob.material.opacity = Math.max(0.25, 1 - h * 0.05);
     } else {

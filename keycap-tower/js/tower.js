@@ -1,6 +1,7 @@
 // 타워 렌더링: 키캡 종류별 InstancedMesh (충돌 박스 = 사다리꼴 윗면 크기)
 import * as THREE from 'three';
 import { KEY_TYPES, KEY_DIMS, STAGES } from './layout.js';
+import { G, GIMMICK_INFO } from './gimmicks.js';
 
 // 사다리꼴(위가 좁은) 키캡 지오메트리. 원점 = 윗면 중앙, 아래로 h 만큼
 // 윗면은 밝게, 아래쪽은 어둡게 버텍스 컬러를 주어 입체감을 낸다.
@@ -86,6 +87,23 @@ function wallTexture() {
   return t;
 }
 
+// 기믹 각인 텍스처 (키캡 윗면에 붙이는 반투명 데칼)
+function legendTexture(ch) {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 128;
+  const g = cv.getContext('2d');
+  g.fillStyle = 'rgba(255,255,255,0.92)';
+  g.strokeStyle = 'rgba(30,40,60,0.55)';
+  g.lineWidth = 6;
+  g.font = 'bold 92px "Noto Sans KR", "Apple SD Gothic Neo", sans-serif';
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.strokeText(ch, 64, 70);
+  g.fillText(ch, 64, 70);
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
 // 스테이지 표지 스프라이트
 function labelSprite(text, color) {
   const cv = document.createElement('canvas');
@@ -116,6 +134,9 @@ export class TowerView {
     this.movers = [];      // { box, mesh, index }
     this.cpSlots = [];     // 체크포인트 index → { mesh, index }
     this.labels = [];      // 체크포인트 index → 표지 스프라이트
+    this.slot = new Map(); // 박스 → { mesh, index }
+    this.decal = new Map(); // 박스 → { mesh, index } (기믹 각인)
+    this.dynamic = [];     // 매 프레임 갱신할 박스 (움직임·꺼짐·줄어듦)
 
     const byType = {};
     for (const b of tower.boxes) {
@@ -146,14 +167,37 @@ export class TowerView {
         let c;
         if (b.type === KEY_TYPES.GOAL) c = COLOR_GOAL;
         else if (b.type === KEY_TYPES.SPACE) c = COLOR_SPACE;
+        else if (b.g) c = new THREE.Color(GIMMICK_INFO[b.g].color);   // 기믹 키캡은 종류별 고유 색
         else c = stageColor(b.stage, b.type === KEY_TYPES.WIDE, rnd());
         mesh.setColorAt(i, c);
+        this.slot.set(b, { mesh, index: i });
         if (b.moving) this.movers.push({ box: b, mesh, index: i });
+        if (b.moving || b.g === G.CRUMBLE || b.g === G.SHRINK) this.dynamic.push(b);
         if (b.cpIndex) this.cpSlots[b.cpIndex] = { mesh, index: i };
       });
       mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       this.group.add(mesh);
       this.meshes[type] = mesh;
+    }
+
+    // 기믹 각인 데칼: 종류별 InstancedMesh 하나씩 (키캡 윗면에 평평하게)
+    const plane = new THREE.PlaneGeometry(1, 1);
+    plane.rotateX(-Math.PI / 2);
+    const byG = {};
+    for (const b of tower.boxes) if (b.g) (byG[b.g] = byG[b.g] || []).push(b);
+    this.decalMeshes = [];
+    for (const g of Object.keys(byG)) {
+      const list = byG[g];
+      const dm = new THREE.InstancedMesh(plane, new THREE.MeshBasicMaterial({
+        map: legendTexture(GIMMICK_INFO[g].legend), transparent: true, depthWrite: false,
+        polygonOffset: true, polygonOffsetFactor: -2,
+      }), list.length);
+      dm.frustumCulled = false;
+      dm.renderOrder = 1;
+      list.forEach((b, i) => { this.decal.set(b, { mesh: dm, index: i }); this.setDecal(b); });
+      dm.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      this.group.add(dm);
+      this.decalMeshes.push(dm);
     }
 
     // 움직이는 키캡 밑면 표시용 테두리 강조 (조금 더 진한 색)
@@ -245,18 +289,54 @@ export class TowerView {
     }
   }
 
+  // 키캡 표시 상태: 줄어드는 키캡은 가로·세로 축소, 꺼지는 키캡은 눌림(흔들림), 사라지면 숨김
+  boxLook(b) {
+    if (b.off) return { sx: 0, sz: 0, dy: 0 };
+    let sx = 1, sz = 1, dy = 0;
+    if (b.g === G.SHRINK && b.bhx) { sx = b.hx / b.bhx; sz = b.hz / b.bhz; }
+    if (b.g === G.CRUMBLE && b.cr) dy = -0.12 + Math.sin(b.cr.t * 60) * 0.03;
+    return { sx, sz, dy };
+  }
+
   setMatrix(mesh, i, b) {
-    this._v.set(b.x, b.top, b.z);
-    this._m4.compose(this._v, b.rot ? this._qRot : this._q.identity(), this._one);
+    const k = this.boxLook(b);
+    this._v.set(b.x, b.top + k.dy, b.z);
+    // 회전된 키캡(rot)은 지오메트리 기준 축이 바뀌므로 축소 비율도 맞바꿈. 사라진 키캡은 아주 작게 숨김
+    this._s = this._s || new THREE.Vector3();
+    if (b.off) this._s.set(1e-4, 1e-4, 1e-4);
+    else if (b.rot) this._s.set(Math.max(1e-4, k.sz), 1, Math.max(1e-4, k.sx));
+    else this._s.set(Math.max(1e-4, k.sx), 1, Math.max(1e-4, k.sz));
+    this._m4.compose(this._v, b.rot ? this._qRot : this._q.identity(), this._s);
     mesh.setMatrixAt(i, this._m4);
   }
 
-  // 매 프레임: 움직이는 키캡 위치 반영
+  // 각인 데칼: 윗면 위 2cm, 컨베이어는 화살표를 밀리는 방향으로 회전
+  setDecal(b) {
+    const d = this.decal.get(b);
+    if (!d) return;
+    const k = this.boxLook(b);
+    const size = Math.min(b.hx, b.hz) * 1.5;
+    this._dq = this._dq || new THREE.Quaternion();
+    this._dy = this._dy || new THREE.Vector3(0, 1, 0);
+    const ang = b.g === G.CONVEYOR && b.conv ? Math.atan2(-b.conv.z, b.conv.x) : 0;
+    this._dq.setFromAxisAngle(this._dy, ang);
+    this._ds = this._ds || new THREE.Vector3();
+    const vis = b.off ? 1e-4 : 1;
+    this._ds.set(size * vis, 1, size * vis);
+    this._v.set(b.x, b.top + 0.02 + k.dy, b.z);
+    this._m4.compose(this._v, this._dq, this._ds);
+    d.mesh.setMatrixAt(d.index, this._m4);
+  }
+
+  // 매 프레임: 움직이는·꺼지는·줄어드는 키캡 반영
   update(dt) {
     const dirty = new Set();
-    for (const mv of this.movers) {
-      this.setMatrix(mv.mesh, mv.index, mv.box);
-      dirty.add(mv.mesh);
+    for (const b of this.dynamic) {
+      const s = this.slot.get(b);
+      this.setMatrix(s.mesh, s.index, b);
+      dirty.add(s.mesh);
+      const d = this.decal.get(b);
+      if (d) { this.setDecal(b); dirty.add(d.mesh); }
     }
     for (const m of dirty) m.instanceMatrix.needsUpdate = true;
     this.star.rotation.y += dt * 1.5;

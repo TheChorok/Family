@@ -2,8 +2,13 @@
 // 조종 방식: 발판 뒤쪽으로 물러나 도움닫기 → 가장자리에서 코요테 점프 → 공중에서 착지점에 맞춰 탄도 제어
 import {
   createWorld, createPlayer, stepPlayer, updateMovers, FIXED_DT,
-  GRAVITY, JUMP_V, MOVE_SPEED, COYOTE_TIME,
+  GRAVITY, MOVE_SPEED, COYOTE_TIME,
 } from '../js/physics.js';
+import { createRules, tickRules, onLand, transformInput, resetRules, trySetScale } from '../js/rules.js';
+import { G, BIG } from '../js/gimmicks.js';
+
+// 오래 서 있으면 안 되거나(꺼짐·줄어듦), 멈추기 어려운(얼음·컨베이어) 발판: 물러나지 않고 바로 달려 점프
+const RUSH = new Set([G.ICE, G.CONVEYOR, G.CRUMBLE, G.SHRINK]);
 
 export const FALL_DIST = 12;       // 게임과 동일: 마지막 체크포인트보다 12m 아래면 부활
 export const FALL_TIME = 1.5;      // 게임과 동일: 1.5초 넘게 떨어지면 부활
@@ -36,12 +41,15 @@ export function createController() {
   return { mode: 'prep', prepPt: null, ungrounded: 0, coyoteJumps: 0 };
 }
 
-export function controlStep(c, p, B, time) {
+// B2: B 다음 키캡. B가 점프대면 B2 쪽 가장자리에 착지해야 튕김 거리가 충분하다 (사람도 그렇게 노림)
+export function controlStep(c, p, B, time, B2 = null) {
   const input = { mx: 0, mz: 0, jumpPressed: false };
   if (p.grounded) {
     const A = p.groundBox;
     // 예측: 달리기+비행 대략 1초 뒤 위치
-    const tl = (JUMP_V + Math.sqrt(Math.max(0, JUMP_V * JUMP_V - 2 * GRAVITY * (B.top - p.y)))) / GRAVITY;
+    const v0 = p.jumpV;
+    const tl = (v0 + Math.sqrt(Math.max(0, v0 * v0 - 2 * GRAVITY * (B.top - p.y)))) / GRAVITY;
+    if (c.mode === 'prep' && RUSH.has(A.g)) c.mode = 'run';
     const [bx, bz] = posAt(B, time + tl + 0.25);
     const [tx, tz] = nearestIn(bx, bz, B.hx, B.hz, 0.5, p.x, p.z);
     const overlapAB = Math.abs(A.x - bx) < A.hx + B.hx && Math.abs(A.z - bz) < A.hz + B.hz;
@@ -68,7 +76,9 @@ export function controlStep(c, p, B, time) {
         const g = Math.hypot(Math.max(0, Math.abs(px - ax) - A.hx - B.hx), Math.max(0, Math.abs(pz - az) - A.hz - B.hz));
         goodPhase = g <= (B.gapInfo.worst + B.gapInfo.best) / 2 + 0.05;   // 간격 변화가 없으면 바로 출발
       }
-      if (el < 0.15 && Math.hypot(p.vx, p.vz) < 0.5 && goodPhase) c.mode = 'run';
+      // '－' 효과로 작은데 다음 계단이 축소 기준으로 배치되지 않았으면 원래 크기로 돌아올 때까지 대기
+      const waitSize = p.scale < 1 && B.gapInfo && !B.gapInfo.small;
+      if (el < 0.15 && Math.hypot(p.vx, p.vz) < 0.5 && goodPhase && !waitSize) c.mode = 'run';
       else { const s = Math.min(1, el * 3); input.mx = (ex / (el || 1)) * s; input.mz = (ez / (el || 1)) * s; }
     }
     if (c.mode === 'run') {
@@ -91,7 +101,11 @@ export function controlStep(c, p, B, time) {
     if (tl < 0) tl = 0.3;
     tl = Math.max(tl, 0.05);
     const [bx, bz] = posAt(B, time + tl);
-    const [tx, tz] = nearestIn(bx, bz, B.hx, B.hz, 0.45, p.x, p.z);
+    let [tx, tz] = nearestIn(bx, bz, B.hx, B.hz, 0.45, p.x, p.z);
+    if (B.g === G.BOUNCE && B2) {
+      const [nx, nz] = posAt(B2, time + tl + 0.5);
+      [tx, tz] = nearestIn(bx, bz, B.hx, B.hz, 0.45, nx, nz);
+    }
     let vx = (tx - p.x) / tl, vz = (tz - p.z) / tl;
     const vl = Math.hypot(vx, vz);
     if (vl > MOVE_SPEED) { vx *= MOVE_SPEED / vl; vz *= MOVE_SPEED / vl; }
@@ -100,9 +114,21 @@ export function controlStep(c, p, B, time) {
   return input;
 }
 
+// 게임과 같은 순서로 한 스텝: 규칙 → (반전이면 입력을 미리 뒤집어 넣음) → 물리 → 착지 처리
+function botStep(r, p, input, world) {
+  tickRules(r, p, FIXED_DT);
+  const m = transformInput(r, input.mx, input.mz);   // 반전 중이면 뒤집힌 값 → 봇은 원하는 방향을 얻으려고 한 번 더 뒤집음
+  const inv = r.reverseT > 0;
+  const ev = stepPlayer(p, { mx: inv ? -m.mx : m.mx, mz: inv ? -m.mz : m.mz, jumpPressed: input.jumpPressed }, world, FIXED_DT);
+  if (ev.landed) onLand(r, p, ev.landBox);
+  r.events.length = 0;   // 봇은 화면 알림을 쓰지 않음
+  return ev;
+}
+
 // 완주 봇: 시작 지점에서 정상까지 순서대로 오른다
-export function runFull(tower, { maxTime = 60 * 30 } = {}) {
+export function runFull(tower, { maxTime = 60 * 40, trace = null } = {}) {
   const world = makeWorld(tower);
+  const r = createRules(world);
   const seq = tower.boxes.slice(1); // 오를 순서 (바닥 제외)
   const idxOf = new Map(seq.map((b, i) => [b, i]));
   const cp0 = tower.checkpoints[0];
@@ -114,10 +140,11 @@ export function runFull(tower, { maxTime = 60 * 30 } = {}) {
   while (time < maxTime) {
     updateMovers(world, time);
     const B = seq[target];
-    const input = controlStep(c, p, B, time);
-    const ev = stepPlayer(p, input, world, FIXED_DT);
+    const input = controlStep(c, p, B, time, seq[target + 1]);
+    const ev = botStep(r, p, input, world);
     if (ev.jumped) { jumps++; if (c.mode === 'run') c.mode = 'air'; }
     time += FIXED_DT;
+    if (trace) trace({ time, target, p, ev, c, r, idxOf });
     fallT = !p.grounded && p.vy < 0 ? fallT + FIXED_DT : 0;
 
     if (ev.landed) {
@@ -137,8 +164,9 @@ export function runFull(tower, { maxTime = 60 * 30 } = {}) {
       if (fallT > FALL_TIME) timeoutFalls++;
       falls++; failsOnTarget++;
       fallByStage[B.stage] = (fallByStage[B.stage] || 0) + 1;
-      if (failsOnTarget > 6) { stuck = { target, stage: B.stage, gap: B.gapInfo }; break; }
+      if (failsOnTarget > 6) { stuck = { target, stage: B.stage, g: B.g, from: seq[target - 1] && seq[target - 1].g, gap: B.gapInfo }; break; }
       Object.assign(p, createPlayer(lastCp.x, lastCp.y, lastCp.z));
+      resetRules(r, p);                       // 게임과 같이 부활 시 키캡·효과 초기화
       fallT = 0;
       target = lastCp.stage === 0 ? 0 : idxOf.get(lastCp.box) + 1;
       c.mode = 'prep'; c.prepPt = null;
@@ -148,23 +176,29 @@ export function runFull(tower, { maxTime = 60 * 30 } = {}) {
 }
 
 // 지름길 봇: from 키캡에서 to 키캡으로 바로 점프를 시도 (성공하면 true)
-export function tryJump(tower, world, from, to, t0) {
+// 출발 키캡에서 커진 상태일 수 있으면(＋ 효과 구간) 커진 상태로 시험 — 가장 멀리 뛸 수 있는 조건
+export function tryJump(tower, world, from, to, t0, { big = from.big } = {}) {
+  const r = createRules(world);
   const [fx, fz] = posAt(from, t0);
   const p = createPlayer(fx, from.top + 0.05, fz);
+  if (big) trySetScale(p, BIG.scale, world);
+  const keepBig = () => { if (big) { r.sizeT = 99; r.sizeTarget = BIG.scale; } };
+  keepBig();
   const c = createController();
   let time = t0, left = false, settled = false;   // settled: 출발 발판에 한 번 착지했는지
   updateMovers(world, time);
   while (time < t0 + 6) {
     updateMovers(world, time);
     const input = controlStep(c, p, to, time);
-    const ev = stepPlayer(p, input, world, FIXED_DT);
+    const ev = botStep(r, p, input, world);
+    if (big) keepBig();
     if (ev.jumped && c.mode === 'run') c.mode = 'air';
     time += FIXED_DT;
-    if (p.grounded && p.groundBox === from) settled = true;
-    if (settled && !p.grounded) left = true;
+    if ((p.grounded && p.groundBox === from) || (ev.landed && ev.landBox === from)) settled = true;
+    if (settled && !p.grounded && !(ev.landed && ev.landBox === from)) left = true;
     if (ev.landed) {
       if (ev.landBox === to) return true;
-      if (left) return false;          // 출발 후 다른 곳에 착지 → 실패
+      if (left && ev.landBox !== from) return false;    // 출발 후 다른 곳에 착지 → 실패
       c.mode = 'prep'; c.prepPt = null;
     }
     if (p.y < Math.min(from.top, to.top) - 4) return false;
