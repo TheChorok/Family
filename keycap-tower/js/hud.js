@@ -12,7 +12,7 @@ export class Hud {
   constructor() {
     this.el = {
       height: $('hHeight'), stage: $('hStage'), time: $('hTime'), falls: $('hFalls'),
-      toast: $('toast'), fade: $('fade'),
+      toast: $('toast'), fade: $('fade'), taunt: $('taunt'),
     };
     this.last = {};
     this.toastTimer = 0;
@@ -38,6 +38,17 @@ export class Hud {
     t.classList.add('show');
     clearTimeout(this.toastTimer);
     this.toastTimer = setTimeout(() => t.classList.remove('show'), ms);
+  }
+
+  // 놀림 팝업: 화면 중앙 상단에 2초간 통통 튀는 애니메이션 (터치는 막지 않음)
+  taunt(msg) {
+    const t = this.el.taunt;
+    t.textContent = msg;
+    t.classList.remove('show');
+    void t.offsetWidth;            // 애니메이션 재시작
+    t.classList.add('show');
+    clearTimeout(this.tauntTimer);
+    this.tauntTimer = setTimeout(() => t.classList.remove('show'), 2000);
   }
 
   fade(on) {

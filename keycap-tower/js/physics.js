@@ -21,11 +21,17 @@ const EPS = 1e-4;
 export const JUMP_APEX = (JUMP_V * JUMP_V) / (2 * GRAVITY);
 
 // 높이 차 dh 만큼 위(음수면 아래)로 뛸 때, 최고 속도로 달려 갈 수 있는 수평 거리(캐릭터 중심 기준)
-export function jumpReach(dh) {
+// speed: 이륙 수평 속도 (도움닫기가 짧으면 최고 속도보다 낮을 수 있음)
+export function jumpReach(dh, speed = MOVE_SPEED) {
   const disc = JUMP_V * JUMP_V - 2 * GRAVITY * dh;
   if (disc < 0) return 0;
   const t = (JUMP_V + Math.sqrt(disc)) / GRAVITY;
-  return MOVE_SPEED * t;
+  return speed * t;
+}
+
+// 도움닫기 거리 runup(m)으로 낼 수 있는 이륙 속도
+export function takeoffSpeed(runup) {
+  return Math.min(MOVE_SPEED, Math.sqrt(2 * ACCEL_GROUND * Math.max(0, runup)));
 }
 
 // 발판 윗면 사이 간격(gap) → 캐릭터 중심이 실제로 이동해야 하는 거리
@@ -35,10 +41,11 @@ export function requiredTravel(gap) {
   return Math.max(0, gap - 2 * PLAYER_HW + 0.2);
 }
 
-// ── 월드(박스 목록 + 높이 버킷) ──
+// ── 월드(박스 목록 + 높이 버킷 + 고정 충돌체) ──
 // box: { x, z, top, h, hx, hz, dx, dz, type, moving, ... }
 //   x,z = 현재 중심, top = 윗면 높이, h = 높이, hx/hz = 윗면 절반 크기(충돌 박스)
-export function createWorld(boxes) {
+// statics: 통로 벽처럼 아주 높은 박스. 높이 버킷과 무관하게 항상 검사한다 (개수가 적음)
+export function createWorld(boxes, statics = []) {
   const buckets = new Map();
   for (const b of boxes) {
     b.dx = b.dx || 0;
@@ -47,7 +54,7 @@ export function createWorld(boxes) {
     if (!buckets.has(k)) buckets.set(k, []);
     buckets.get(k).push(b);
   }
-  return { boxes, buckets };
+  return { boxes, buckets, statics };
 }
 
 // 높이 범위 [minY, maxY]와 겹칠 수 있는 박스를 순회
@@ -59,6 +66,8 @@ export function forEachNear(world, minY, maxY, cb) {
     if (!list) continue;
     for (let i = 0; i < list.length; i++) cb(list[i]);
   }
+  const st = world.statics;
+  if (st) for (let i = 0; i < st.length; i++) cb(st[i]);
 }
 
 // 움직이는 키캡 위치 갱신 (시간 t 기준, 이번 스텝 이동량 dx/dz 기록)
