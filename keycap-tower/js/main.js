@@ -314,16 +314,31 @@ btn('btnRemeasure', () => {
   quality.remeasure();
   hud.toast('그래픽 재측정 중… 잠시 그대로 플레이하세요', 3200);
 });
-btn('btnSound', () => {
-  audio.setMuted(!audio.isMuted());
-  $('btnSound').textContent = audio.isMuted() ? '🔇 소리 켜기' : '🔊 소리 끄기';
-  store.save('muted', audio.isMuted());
-});
 btn('btnAgain', () => { startRun(false); });
 
-if (store.load('muted', false)) {
-  audio.setMuted(true);
-  $('btnSound').textContent = '🔇 소리 켜기';
+// ── 효과음 볼륨 4단계 (끄기/작게/보통/크게, 기본 크게) ──
+function applyVolume(level, preview) {
+  audio.setVolume(level);
+  for (const b of document.querySelectorAll('#volSeg button')) {
+    const on = +b.dataset.vol === audio.getVolume();
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-checked', on ? 'true' : 'false');
+  }
+  if (preview) audio.playKey(0, 0.8);   // 선택한 크기로 미리 듣기
+}
+for (const b of document.querySelectorAll('#volSeg button')) {
+  b.addEventListener('click', (e) => {
+    e.preventDefault();
+    unlock();
+    applyVolume(+b.dataset.vol, true);
+    store.save('volume', audio.getVolume());
+  });
+}
+{
+  // 저장값 우선, 없으면 이전 버전의 '소리 끄기' 설정을 이어받음
+  let v = store.load('volume', null);
+  if (typeof v !== 'number') v = store.load('muted', false) ? 0 : audio.DEFAULT_VOLUME;
+  applyVolume(v, false);
 }
 
 // ── 홈 화면 설치 버튼 (Chrome beforeinstallprompt) ──

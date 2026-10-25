@@ -142,6 +142,17 @@ button.small {
 .rec th { text-align: left; opacity: 0.65; padding: 6px 4px; }
 .rec td { text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; padding: 6px 4px; }
 
+/* 효과음 볼륨 선택 (4단계 세그먼트) */
+.vol { margin: 10px 0 4px; }
+.vol .sub { margin: 0 0 6px; }
+.seg { display: flex; gap: 6px; }
+.seg button {
+  flex: 1; padding: 10px 0; border: none; border-radius: 12px;
+  background: #f4f1ea; box-shadow: 0 3px 0 #c4bdaf; font-weight: 800; font-size: 15px;
+}
+.seg button.on { background: var(--mint); box-shadow: 0 3px 0 #3c9f83; color: #0f3b30; }
+.seg button:active { transform: translateY(2px); box-shadow: 0 1px 0 #c4bdaf; }
+
 /* 메뉴가 열리면 조작 UI 숨김 */
 body.menu-open #hud, body.menu-open #jump, body.menu-open #joyHint, body.menu-open #joy { display: none; }
 
