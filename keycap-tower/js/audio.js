@@ -1,8 +1,12 @@
 // Web Audio 합성 효과음 (음원 파일 없음)
 // 키캡 종류별 타건음 3종 + 점프/체크포인트/클리어 효과음
-// 신호 흐름: 각 효과음 → master(볼륨 단계 게인) → DynamicsCompressor(클리핑 방지) → 출력
+// 신호 흐름: 각 효과음 → master(효과음 볼륨) ─┐
+//           배경음악(bgm.js) → bgmBus(BGM 볼륨) ─┴→ DynamicsCompressor(리미터, 클리핑 방지) → 출력
+import * as bgm from './bgm.js';
+
 let ctx = null;
 let master = null;
+let bgmBus = null;
 let noiseBuf = null;
 
 // 효과음 볼륨 4단계 (master 게인). 컴프레서 통과 후 최종 출력 기준으로 맞춘 값:
@@ -15,12 +19,23 @@ export const VOLUME_LEVELS = [
 ];
 export const DEFAULT_VOLUME = 3;
 let volume = DEFAULT_VOLUME;
+// 배경음악 볼륨 4단계 (효과음과 별도 저장, 기본 '보통'). 효과음(타건음)이 묻히지 않도록 낮게 잡음
+export const BGM_LEVELS = [
+  { name: '끄기', gain: 0 },
+  { name: '작게', gain: 0.35 },
+  { name: '보통', gain: 0.7 },
+  { name: '크게', gain: 1.2 },
+];
+export const DEFAULT_BGM = 2;
+let bgmLevel = DEFAULT_BGM;
 let offsetT = 0; // 오프라인 검증 시 예약 시작 시간 오프셋
 
 // master → 컴프레서 → 출력 체인 구성 (실제 재생과 오프라인 검증에서 공통 사용)
 function buildChain(c) {
   const m = c.createGain();
   m.gain.value = VOLUME_LEVELS[volume].gain;
+  const b = c.createGain();
+  b.gain.value = BGM_LEVELS[bgmLevel].gain;
   // 리미터처럼 동작하도록 빠른 어택·높은 비율로 설정 (게인을 올려도 출력이 0dBFS를 넘지 않게)
   const comp = c.createDynamicsCompressor();
   // threshold를 높게(-3dB) 두어 평소 소리는 거의 건드리지 않고 겹친 피크만 눌러 준다
@@ -30,8 +45,9 @@ function buildChain(c) {
   comp.attack.value = 0.001;
   comp.release.value = 0.1;
   m.connect(comp);
+  b.connect(comp);
   comp.connect(c.destination);
-  return m;
+  return { m, b };
 }
 
 function makeNoise(c) {
@@ -49,7 +65,7 @@ export function unlockAudio() {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return;
       ctx = new AC();
-      master = buildChain(ctx);
+      ({ m: master, b: bgmBus } = buildChain(ctx));
       noiseBuf = makeNoise(ctx);
     }
     if (ctx.state === 'suspended') ctx.resume();
@@ -66,6 +82,22 @@ export function setVolume(level) {
   if (master) master.gain.value = VOLUME_LEVELS[volume].gain;
 }
 export function getVolume() { return volume; }
+
+// 배경음악 볼륨 단계 (0=끄기 ~ 3=크게). 끄기면 재생 자체를 멈춤
+export function setBgmVolume(level) {
+  bgmLevel = Math.max(0, Math.min(BGM_LEVELS.length - 1, level | 0));
+  if (bgmBus) bgmBus.gain.value = BGM_LEVELS[bgmLevel].gain;
+  if (bgmLevel === 0) bgm.stop();
+}
+export function getBgmVolume() { return bgmLevel; }
+
+// 배경음악 재생/정지 (게임 상태에 맞춰 main.js가 호출). stage: 템포용 현재 스테이지
+export function setBgm(on, stage = 1) {
+  bgm.setStage(stage);
+  if (on && ctx && bgmLevel > 0) bgm.start(ctx, bgmBus);
+  else bgm.stop();
+}
+export function bgmPlaying() { return bgm.isPlaying(); }
 
 function ready() {
   return ctx && ctx.state === 'running' && volume > 0;
@@ -127,8 +159,10 @@ function keySound(kind, strength) {
 // 기믹 효과음: bounce(튕김), ice(유리 같은 딸깍), vanish(키캡 사라짐), small(작아짐), big(커짐),
 // sizeEnd(원래 크기), reverse(반전 경고), crumble(금 가는 소리)
 export function playGimmick(kind) {
-  if (!ready()) return;
-  const t = ctx.currentTime + 0.005;
+  if (ready()) gimmickSound(kind);
+}
+function gimmickSound(kind) {
+  const t = ctx.currentTime + 0.005 + offsetT;
   switch (kind) {
     case 'bounce':
       tone(t, 0.28, 'sine', 180, 720, 0.35);
@@ -200,11 +234,13 @@ function clearSound() {
 // 검증용: 볼륨 단계별로 효과음을 OfflineAudioContext에 렌더링해 최대 출력과 클리핑 샘플 수를 측정
 // sounds: [[이름, 시작시간(초)], ...] 이름 = key0|key1|key2|jump|checkpoint|fall|clear
 // legacy: 이전 버전 체인(게인 0.8 + 기본값 컴프레서) 비교용
-export async function renderTest(level, sounds, { bypassCompressor = false, legacy = false } = {}) {
+// bgmLvl: 배경음악을 함께 렌더링할 BGM 볼륨 단계 (null이면 효과음만), seconds: 렌더링 길이
+export async function renderTest(level, sounds, { bypassCompressor = false, legacy = false, bgmLvl = null, seconds = 2, stage = 10 } = {}) {
   const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
-  const off = new OAC(1, 44100 * 2, 44100);
-  const saved = [ctx, master, noiseBuf, volume];
+  const off = new OAC(1, Math.floor(44100 * seconds), 44100);
+  const saved = [ctx, master, noiseBuf, volume, bgmBus, bgmLevel];
   volume = level;
+  if (bgmLvl !== null) bgmLevel = bgmLvl;
   ctx = off;
   noiseBuf = makeNoise(off);
   if (legacy) {
@@ -218,12 +254,15 @@ export async function renderTest(level, sounds, { bypassCompressor = false, lega
     master.gain.value = VOLUME_LEVELS[level].gain;
     master.connect(off.destination);
   } else {
-    master = buildChain(off);
+    ({ m: master, b: bgmBus } = buildChain(off));
+    if (bgmLvl) bgm.renderInto(off, bgmBus, seconds, stage);
   }
   // 오프라인 컨텍스트는 state가 'suspended'라 ready()를 우회해 합성 함수를 직접 예약 (타건음은 최대 세기)
   const synth = {
     key0: () => keySound(0, 1), key1: () => keySound(1, 1), key2: () => keySound(2, 1),
     jump: jumpSound, checkpoint: checkpointSound, fall: fallSound, clear: clearSound,
+    bounce: () => gimmickSound('bounce'), vanish: () => gimmickSound('vanish'), reverse: () => gimmickSound('reverse'),
+    big: () => gimmickSound('big'), ice: () => gimmickSound('ice'), crumble: () => gimmickSound('crumble'),
   };
   try {
     for (const [name, at] of sounds) {
@@ -232,7 +271,7 @@ export async function renderTest(level, sounds, { bypassCompressor = false, lega
     }
   } finally {
     offsetT = 0;
-    [ctx, master, noiseBuf, volume] = saved;
+    [ctx, master, noiseBuf, volume, bgmBus, bgmLevel] = saved;
   }
   const buf = await off.startRendering();
   const d = buf.getChannelData(0);
@@ -247,5 +286,5 @@ export async function renderTest(level, sounds, { bypassCompressor = false, lega
   // RMS는 앞쪽 0.25초(타건음 길이) 기준 에너지로 비교
   let sq25 = 0; const n25 = Math.floor(off.sampleRate * 0.25);
   for (let i = 0; i < n25; i++) sq25 += d[i] * d[i];
-  return { gain: VOLUME_LEVELS[level].gain, peak, peakDb: db(peak), rmsDb: db(Math.sqrt(sq25 / n25)), clipped };
+  return { gain: VOLUME_LEVELS[level].gain, bgmGain: bgmLvl === null ? null : BGM_LEVELS[bgmLvl].gain, peak, peakDb: db(peak), rmsDb: db(Math.sqrt(sq25 / n25)), rmsAllDb: db(Math.sqrt(sq / d.length)), clipped };
 }

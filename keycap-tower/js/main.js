@@ -147,6 +147,12 @@ function resume() {
   input.enabled = true;
   acc = 0;
   requestWakeLock();
+  syncBgm();
+}
+
+// 배경음악: 플레이 중이고 화면이 보일 때만 재생 (일시정지·앱 전환·클리어·타이틀에서는 정지)
+function syncBgm() {
+  audio.setBgm(state === 'playing' && document.visibilityState === 'visible', Math.min(STAGES, run.cp + 1));
 }
 
 function pause() {
@@ -156,6 +162,7 @@ function pause() {
   input.reset();
   saveRun();
   releaseWakeLock();
+  syncBgm();
   showOverlay('pauseMenu');
 }
 
@@ -170,6 +177,7 @@ function onCheckpoint(index) {
   saveRun();
   towerView.setCheckpoints(run.cp);
   audio.playCheckpoint();
+  syncBgm();          // 다음 반복부터 새 스테이지 템포
   hud.toast(`✅ 체크포인트! 스테이지 ${index} 완료`);
 }
 
@@ -178,6 +186,7 @@ function onClear() {
   input.enabled = false;
   input.reset();
   releaseWakeLock();
+  syncBgm();
   audio.playClear();
   const best = store.load(BEST_KEY, null);
   const isNew = !best || run.time < best.time;
@@ -380,6 +389,7 @@ document.addEventListener('visibilitychange', () => {
     if (state === 'playing') pause();
     else if (state === 'paused') saveRun();
   }
+  syncBgm();
 });
 window.addEventListener('pagehide', () => { if (state === 'playing' || state === 'paused') saveRun(); });
 
@@ -441,6 +451,28 @@ for (const b of document.querySelectorAll('#volSeg button')) {
   let v = store.load('volume', null);
   if (typeof v !== 'number') v = store.load('muted', false) ? 0 : audio.DEFAULT_VOLUME;
   applyVolume(v, false);
+}
+
+// ── 배경음악 볼륨 4단계 (끄기/작게/보통/크게, 기본 보통, 효과음과 별도 저장: kt_bgm) ──
+function applyBgmVolume(level) {
+  audio.setBgmVolume(level);
+  for (const b of document.querySelectorAll('#bgmSeg button')) {
+    const on = +b.dataset.vol === audio.getBgmVolume();
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-checked', on ? 'true' : 'false');
+  }
+}
+for (const b of document.querySelectorAll('#bgmSeg button')) {
+  b.addEventListener('click', (e) => {
+    e.preventDefault();
+    unlock();
+    applyBgmVolume(+b.dataset.vol);
+    store.save('bgm', audio.getBgmVolume());
+  });
+}
+{
+  const v = store.load('bgm', null);
+  applyBgmVolume(typeof v === 'number' ? v : audio.DEFAULT_BGM);
 }
 
 // ── 홈 화면 설치 버튼 (Chrome beforeinstallprompt) ──
