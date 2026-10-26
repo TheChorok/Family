@@ -58,6 +58,9 @@ const towerView = new TowerView(scene, tower);
 const playerView = new PlayerView(scene);
 const follow = new FollowCamera(camera);
 follow.setView(tower.view);
+// 카메라 거리: 저장값(kt_camdist) 우선
+follow.setZoom(store.load('camdist', follow.zoom));
+let zoomSaveT = 0;
 const hud = new Hud();
 const input = new Input({ layer: $('touch'), joyBase: $('joy'), joyKnob: $('joyKnob'), jumpBtn: $('jump') });
 
@@ -289,6 +292,13 @@ function frame(now) {
     // 카메라 회전 입력
     const look = input.consumeLook();
     follow.rotate(look.dx, look.dy);
+    // 핀치·휠 거리 조절 (바뀌면 잠시 뒤 저장)
+    const zf = input.consumeZoom();
+    if (zf !== 1) {
+      follow.zoomBy(zf);
+      clearTimeout(zoomSaveT);
+      zoomSaveT = setTimeout(() => store.save('camdist', Math.round(follow.zoom * 100) / 100), 400);
+    }
 
     if (respawnT > 0) {
       // 부활 연출: 화면 어두워진 상태에서 체크포인트로 이동
@@ -360,7 +370,7 @@ function frame(now) {
 
   towerView.update(dt);
   playerView.update(dt, player, world);
-  follow.update(dt, player, world, state === 'title');
+  follow.update(dt, player, world);
   towerView.updateWalls(dt, camera.position);
   // 그림자용 태양광은 캐릭터를 따라다님
   sun.position.set(player.x + 12, player.y + 26, player.z + 8);

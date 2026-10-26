@@ -17,6 +17,9 @@ export class Input {
 
     this.joyId = null; this.joyOx = 0; this.joyOy = 0; this.joyX = 0; this.joyY = 0;
     this.lookId = null; this.lookLx = 0; this.lookLy = 0; this.lookDx = 0; this.lookDy = 0;
+    // 핀치(두 손가락 거리 조절): 시점 회전 손가락 + 두 번째 손가락
+    this.pinchId = null; this.pinchX = 0; this.pinchY = 0; this.pinchD = 0;
+    this.zoomF = 1;            // 누적 거리 배율 (1 미만 = 가까이)
     this.jumpQueued = false;
     this.jumpIds = new Set();
     this.keys = new Set();
@@ -56,6 +59,14 @@ export class Input {
     window.addEventListener('blur', () => this.reset());
     // 길게 누르기 메뉴·드래그 기본 동작 차단
     layer.addEventListener('contextmenu', (e) => e.preventDefault());
+    // PC 마우스 휠: 위로 굴리면 가까이, 아래로 굴리면 멀리
+    // (HUD 등 다른 요소 위에서 굴려도 동작하도록 window에서 받음, 메뉴가 열려 있으면 무시)
+    window.addEventListener('wheel', (e) => {
+      if (!this.enabled) return;
+      e.preventDefault();
+      const px = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaMode === 2 ? e.deltaY * 400 : e.deltaY;
+      this.zoomF *= Math.exp(Math.max(-200, Math.min(200, px)) * 0.0015);
+    }, { passive: false });
   }
 
   // 첫 사용자 제스처 콜백 (오디오 활성화 등)
@@ -79,6 +90,11 @@ export class Input {
       // 나머지 영역 → 카메라 회전
       this.lookId = e.pointerId;
       this.lookLx = e.clientX; this.lookLy = e.clientY;
+    } else if (isTouch && this.pinchId === null) {
+      // 회전 중인 손가락 + 두 번째 손가락 → 핀치로 거리 조절 (핀치 중에는 회전 멈춤)
+      this.pinchId = e.pointerId;
+      this.pinchX = e.clientX; this.pinchY = e.clientY;
+      this.pinchD = Math.hypot(this.pinchX - this.lookLx, this.pinchY - this.lookLy);
     } else {
       return;
     }
@@ -99,10 +115,24 @@ export class Input {
       this.joyY = dy / JOY_RADIUS;
       this.updateJoyVisual();
     } else if (e.pointerId === this.lookId) {
-      this.lookDx += e.clientX - this.lookLx;
-      this.lookDy += e.clientY - this.lookLy;
+      if (this.pinchId === null) {
+        this.lookDx += e.clientX - this.lookLx;
+        this.lookDy += e.clientY - this.lookLy;
+      }
       this.lookLx = e.clientX; this.lookLy = e.clientY;
+      this.updatePinch();
+    } else if (e.pointerId === this.pinchId) {
+      this.pinchX = e.clientX; this.pinchY = e.clientY;
+      this.updatePinch();
     }
+  }
+
+  // 두 손가락 거리 변화 → 거리 배율 (벌리면 가까이, 오므리면 멀리)
+  updatePinch() {
+    if (this.pinchId === null) return;
+    const d = Math.hypot(this.pinchX - this.lookLx, this.pinchY - this.lookLy);
+    if (d > 10 && this.pinchD > 10) this.zoomF *= this.pinchD / d;
+    this.pinchD = d;
   }
 
   onUp(e) {
@@ -110,7 +140,12 @@ export class Input {
       this.joyId = null; this.joyX = 0; this.joyY = 0;
       this.showJoy(false);
     } else if (e.pointerId === this.lookId) {
-      this.lookId = null;
+      // 회전 손가락을 먼저 떼면 남은 핀치 손가락이 회전을 이어받음
+      this.lookId = this.pinchId;
+      this.lookLx = this.pinchX; this.lookLy = this.pinchY;
+      this.pinchId = null;
+    } else if (e.pointerId === this.pinchId) {
+      this.pinchId = null;
     }
   }
 
@@ -127,6 +162,7 @@ export class Input {
   reset() {
     this.joyId = null; this.joyX = 0; this.joyY = 0;
     this.lookId = null; this.lookDx = 0; this.lookDy = 0;
+    this.pinchId = null; this.zoomF = 1;
     this.jumpQueued = false; this.jumpIds.clear();
     this.keys.clear();
     this.jumpBtn.classList.remove('down');
@@ -153,6 +189,13 @@ export class Input {
     const j = this.jumpQueued;
     this.jumpQueued = false;
     return j && this.enabled;
+  }
+
+  // 이번 프레임까지 쌓인 거리 배율 (1 = 변화 없음)
+  consumeZoom() {
+    const f = this.zoomF;
+    this.zoomF = 1;
+    return f;
   }
 
   consumeLook() {
