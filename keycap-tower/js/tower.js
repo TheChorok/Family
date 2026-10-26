@@ -275,11 +275,15 @@ export class TowerView {
     }
   }
 
-  // 카메라가 벽 안쪽 면 바깥(또는 면 위)에 있으면 그 벽만 반투명 (그 외에는 불투명)
+  // 카메라가 벽 안쪽 면 바깥(또는 면 바로 앞)에 있으면 그 벽만 반투명 (그 외에는 불투명)
+  // 통로는 볼록한 공간이라, 카메라가 모든 벽 안쪽에 있으면 카메라-캐릭터 사이에 벽이 올 수 없다.
+  // 켜짐/꺼짐 기준을 다르게 해(히스테리시스) 경계에서 깜빡이지 않게 한다
   updateWalls(dt, cam) {
     const k = 1 - Math.exp(-dt * 10);
     for (const w of this.walls) {
-      const beyond = (cam[w.axis] - w.face) * w.out > -0.15;
+      const depth = (cam[w.axis] - w.face) * w.out;   // 안쪽 면 기준 바깥으로 나간 거리 (안쪽이면 음수)
+      const beyond = w.see ? depth > -0.35 : depth > -0.15;
+      w.see = beyond;
       const want = beyond ? 0.3 : 1;
       w.opacity += (want - w.opacity) * k;
       if (Math.abs(w.opacity - want) < 0.01) w.opacity = want;
