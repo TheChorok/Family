@@ -6,6 +6,9 @@ const DEADZONE = 0.12;
 // 일반·노트북 키보드는 '방향키 2개 + 스페이스' 같은 3키 조합을 하드웨어에서 인식 못 하는 경우가 있어(고스팅)
 // 배선이 다른 키(특히 Shift)로도 점프할 수 있게 한다
 const JUMP_KEYS = new Set(['Space', 'ShiftLeft', 'ShiftRight', 'KeyZ', 'KeyX', 'KeyJ']);
+// 점프 버튼 주변 여유(px): 보이는 버튼보다 이만큼 넓게 점프로 인정
+// (이동하면서 엄지로 누르면 버튼 가장자리를 살짝 벗어나기 쉬움 → 예전에는 그 터치가 '시점 회전'이 되어 점프가 무시됨)
+const JUMP_PAD = 28;
 
 export class Input {
   constructor({ layer, joyBase, joyKnob, jumpBtn }) {
@@ -22,6 +25,11 @@ export class Input {
     this.zoomF = 1;            // 누적 거리 배율 (1 미만 = 가까이)
     this.jumpQueued = false;
     this.jumpIds = new Set();
+    // 진단(?debug=1)용: 터치별 역할, 마지막 pointercancel, 점프 입력 횟수
+    this.roles = new Map();          // pointerId → 'joy' | 'look' | 'pinch' | 'jump' | 'jump+'(여유 영역)
+    this.lastCancel = null;          // { t, role }
+    this.cancels = 0;
+    this.jumpTaps = 0; this.padTaps = 0;
     this.keys = new Set();
     this.gestureCbs = [];
 
@@ -31,22 +39,24 @@ export class Input {
     layer.addEventListener('pointercancel', (e) => this.onUp(e));
     layer.addEventListener('lostpointercapture', (e) => this.onUp(e));
 
+    // 진단용: pointercancel(브라우저가 터치를 가로챔) 기록 — 역할을 지우기 전에 기록되도록 캡처 단계에서
+    const noteCancel = (e) => {
+      this.cancels++;
+      this.lastCancel = { t: performance.now(), role: this.roles.get(e.pointerId) || '?' };
+    };
+    layer.addEventListener('pointercancel', noteCancel, { capture: true });
+    jumpBtn.addEventListener('pointercancel', noteCancel, { capture: true });
+
     jumpBtn.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       e.stopPropagation();
       this.fireGesture();
       if (!this.enabled) return;
-      this.jumpQueued = true;
-      this.jumpIds.add(e.pointerId);
-      jumpBtn.classList.add('down');
+      this.pressJump(e.pointerId, 'jump');
     });
-    const jumpUp = (e) => {
-      this.jumpIds.delete(e.pointerId);
-      if (this.jumpIds.size === 0) jumpBtn.classList.remove('down');
-    };
-    jumpBtn.addEventListener('pointerup', jumpUp);
-    jumpBtn.addEventListener('pointercancel', jumpUp);
-    jumpBtn.addEventListener('pointerleave', jumpUp);
+    jumpBtn.addEventListener('pointerup', (e) => this.releaseJump(e.pointerId));
+    jumpBtn.addEventListener('pointercancel', (e) => this.releaseJump(e.pointerId));
+    jumpBtn.addEventListener('pointerleave', (e) => this.releaseJump(e.pointerId));
 
     window.addEventListener('keydown', (e) => {
       if (e.repeat) return;
@@ -73,28 +83,59 @@ export class Input {
   onGesture(cb) { this.gestureCbs.push(cb); }
   fireGesture() { for (const cb of this.gestureCbs) cb(); }
 
+  pressJump(id, role) {
+    this.jumpQueued = true;
+    this.jumpIds.add(id);
+    this.roles.set(id, role);
+    if (role === 'jump') this.jumpTaps++; else this.padTaps++;
+    this.jumpBtn.classList.add('down');
+  }
+  releaseJump(id) {
+    if (!this.jumpIds.has(id)) return;
+    this.jumpIds.delete(id);
+    this.roles.delete(id);
+    if (this.jumpIds.size === 0) this.jumpBtn.classList.remove('down');
+  }
+
+  // 점프 버튼 주변 여유 영역 안인지 (버튼이 보일 때만)
+  inJumpPad(x, y) {
+    const r = this.jumpBtn.getBoundingClientRect();
+    if (!r.width) return false;
+    return x >= r.left - JUMP_PAD && x <= r.right + JUMP_PAD && y >= r.top - JUMP_PAD && y <= r.bottom + JUMP_PAD;
+  }
+
   onDown(e) {
     e.preventDefault();
     this.fireGesture();
     if (!this.enabled) return;
     const w = window.innerWidth, h = window.innerHeight;
     const isTouch = e.pointerType !== 'mouse';
+    // 점프 버튼 가장자리 근처 터치 → 점프 (시점 회전·핀치로 쓰지 않음)
+    if (isTouch && this.inJumpPad(e.clientX, e.clientY)) {
+      this.pressJump(e.pointerId, 'jump+');
+      try { this.layer.setPointerCapture(e.pointerId); } catch (err) { /* 무시 */ }
+      return;
+    }
     // 왼쪽 하단 영역 → 플로팅 조이스틱
     if (isTouch && this.joyId === null && e.clientX < w * 0.5 && e.clientY > h * 0.4) {
       this.joyId = e.pointerId;
       this.joyOx = e.clientX; this.joyOy = e.clientY;
       this.joyX = 0; this.joyY = 0;
+      this.roles.set(e.pointerId, 'joy');
       this.showJoy(true);
       this.updateJoyVisual();
     } else if (this.lookId === null) {
       // 나머지 영역 → 카메라 회전
       this.lookId = e.pointerId;
       this.lookLx = e.clientX; this.lookLy = e.clientY;
+      this.roles.set(e.pointerId, 'look');
     } else if (isTouch && this.pinchId === null) {
       // 회전 중인 손가락 + 두 번째 손가락 → 핀치로 거리 조절 (핀치 중에는 회전 멈춤)
       this.pinchId = e.pointerId;
       this.pinchX = e.clientX; this.pinchY = e.clientY;
       this.pinchD = Math.hypot(this.pinchX - this.lookLx, this.pinchY - this.lookLy);
+      this.roles.set(e.pointerId, 'pinch');
+      this.roles.set(this.lookId, 'pinch');
     } else {
       return;
     }
@@ -136,6 +177,8 @@ export class Input {
   }
 
   onUp(e) {
+    if (this.jumpIds.has(e.pointerId)) { this.releaseJump(e.pointerId); return; }
+    this.roles.delete(e.pointerId);
     if (e.pointerId === this.joyId) {
       this.joyId = null; this.joyX = 0; this.joyY = 0;
       this.showJoy(false);
@@ -143,8 +186,10 @@ export class Input {
       // 회전 손가락을 먼저 떼면 남은 핀치 손가락이 회전을 이어받음
       this.lookId = this.pinchId;
       this.lookLx = this.pinchX; this.lookLy = this.pinchY;
+      if (this.pinchId !== null) this.roles.set(this.pinchId, 'look');
       this.pinchId = null;
     } else if (e.pointerId === this.pinchId) {
+      if (this.lookId !== null) this.roles.set(this.lookId, 'look');
       this.pinchId = null;
     }
   }
@@ -163,7 +208,7 @@ export class Input {
     this.joyId = null; this.joyX = 0; this.joyY = 0;
     this.lookId = null; this.lookDx = 0; this.lookDy = 0;
     this.pinchId = null; this.zoomF = 1;
-    this.jumpQueued = false; this.jumpIds.clear();
+    this.jumpQueued = false; this.jumpIds.clear(); this.roles.clear();
     this.keys.clear();
     this.jumpBtn.classList.remove('down');
     this.showJoy(false);

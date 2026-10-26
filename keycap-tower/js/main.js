@@ -278,6 +278,49 @@ function effectList() {
   return out;
 }
 
+// ── 진단 모드 (?debug=1): 터치 역할·착지·코요테·점프 버퍼·밟은 키캡·pointercancel 실시간 표시 ──
+const dbg = /[?&]debug=1\b/.test(location.search) ? createDebug() : null;
+function createDebug() {
+  const el = document.createElement('div');
+  el.id = 'debug';
+  document.body.appendChild(el);
+  const G_NAME = ['일반', '점프대', '얼음', '컨베이어', '꺼짐', '－', '＋', '줄어듦', '반전'];
+  const st = { presses: 0, ok: 0, missed: 0, missedGround: 0, pending: null, last: 0, lastMiss: '' };
+  return {
+    // 점프 입력이 게임에 전달된 순간 (착지 상태 함께 기록)
+    press(p) {
+      st.presses++;
+      if (st.pending) st.missed++;
+      st.pending = { t: performance.now(), grounded: p.grounded, coyote: p.coyote };
+    },
+    jumped() { st.ok++; st.pending = null; },
+    update(p) {
+      const now = performance.now();
+      // 입력 후 0.25초 안에 점프가 안 되면 '무시됨'으로 집계 (그때 착지 상태였는지 함께)
+      if (st.pending && now - st.pending.t > 250) {
+        st.missed++;
+        if (st.pending.grounded || st.pending.coyote > 0) st.missedGround++;
+        st.lastMiss = st.pending.grounded ? '착지 중 무시!' : `공중(코요테 ${(st.pending.coyote * 1000) | 0}ms)`;
+        st.pending = null;
+      }
+      if (now - st.last < 100) return;      // 초당 10회만 갱신
+      st.last = now;
+      const roles = [...input.roles.values()];
+      const gb = p.groundBox;
+      const kind = !gb ? '-' : gb.moving ? `이동·${G_NAME[gb.g || 0]}` : gb.type === KEY_TYPES.SPACE ? '스페이스바' : G_NAME[gb.g || 0];
+      const lc = input.lastCancel;
+      el.textContent = [
+        `터치 ${roles.length}: ${roles.join(' ') || '-'}`,
+        `착지 ${p.grounded ? 'O' : 'X'}  코요테 ${(p.coyote * 1000) | 0}ms  버퍼 ${(p.jumpBuf * 1000) | 0}ms`,
+        `밟은 키캡: ${kind}`,
+        `점프 입력 ${st.presses} / 성공 ${st.ok} / 무시 ${st.missed} (착지 중 ${st.missedGround})`,
+        `버튼 ${input.jumpTaps} · 가장자리 ${input.padTaps}${st.lastMiss ? '  마지막 무시: ' + st.lastMiss : ''}`,
+        `cancel ${input.cancels}회${lc ? `  마지막 ${((now - lc.t) / 1000).toFixed(1)}초 전(${lc.role})` : ''}`,
+      ].join('\n');
+    },
+  };
+}
+
 // ── 메인 루프 ──
 let lastT = performance.now();
 function frame(now) {
@@ -322,6 +365,7 @@ function frame(now) {
         updateMovers(world, simTime);
         tickRules(rules, player, FIXED_DT);
         const dir = transformInput(rules, dir0.x, dir0.z);   // 방향 반전 중이면 거꾸로
+        if (jump && dbg) dbg.press(player);      // 점프 입력이 물리 스텝에 실제로 전달되는 순간
         const wasGrounded = player.grounded;
         const ev = stepPlayer(player, { mx: dir.mx, mz: dir.mz, jumpPressed: jump }, world, FIXED_DT);
         if (wasGrounded && !player.grounded) leaveY = player.y;
@@ -330,7 +374,7 @@ function frame(now) {
         simTime += FIXED_DT;
         acc -= FIXED_DT;
         steps++;
-        if (ev.jumped) audio.playJump();
+        if (ev.jumped) { audio.playJump(); if (dbg) dbg.jumped(); }
         if (ev.bounced) audio.playGimmick('bounce');
         if (ev.landed) {
           const b = ev.landBox;
@@ -363,6 +407,7 @@ function frame(now) {
       time: run.time, falls: run.falls,
     });
     hud.effects(effectList());
+    if (dbg) dbg.update(player);
   } else if (state === 'title') {
     // 타이틀 화면: 타워 주변을 천천히 도는 카메라
     follow.yaw += dt * 0.15;
