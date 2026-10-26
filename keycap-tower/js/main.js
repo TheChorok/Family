@@ -1,7 +1,9 @@
 // 키캡 타워: 딸깍 등반 — 메인 (초기화, 게임 루프, 상태 관리)
 import * as THREE from 'three';
-import { generateTower, KEY_TYPES, STAGES } from './layout.js';
+import { loadTower, KEY_TYPES, STAGES } from './layout.js';
 import { createWorld, createPlayer, stepPlayer, updateMovers, FIXED_DT } from './physics.js';
+import { createRules, tickRules, onLand, transformInput, resetRules } from './rules.js';
+import { G, GIMMICK_INFO, SMALL, BIG } from './gimmicks.js';
 import { TowerView } from './tower.js';
 import { PlayerView } from './player.js';
 import { FollowCamera } from './camera.js';
@@ -39,8 +41,11 @@ sun.shadow.bias = -0.0008;
 scene.add(sun, sun.target);
 
 // ── 월드 ──
-const tower = generateTower();
+// 미리 계산한 탑 데이터를 불러옴 (없으면 직접 생성 — 느림)
+const tower = await loadTower();
 const world = createWorld(tower.boxes, tower.statics);
+const rules = createRules(world);                 // 기믹 규칙 (꺼지는 키캡·크기 변화·방향 반전)
+const boxIndex = new Map(tower.boxes.map((b, i) => [b, i]));
 const BEST_KEY = 'best_' + tower.shape;          // 탑 형태별 최고 기록 (나선 시절 기록은 best_spiral)
 const LEGACY_BEST_KEY = 'best_spiral';
 // 1단계(나선) 최고 기록 'best' → '이전 탑 기록'으로 옮겨 보관
@@ -111,6 +116,7 @@ function validRun(saved) {
 function placeAtCheckpoint(index) {
   const cp = tower.checkpoints[index];
   Object.assign(player, createPlayer(cp.x, cp.y + 0.05, cp.z));
+  resetRules(rules, player);     // 꺼진 키캡 복구, 크기·반전 효과 해제
   playerView.yaw = cp.yaw;
   follow.setBehind(cp.yaw, cp.normal);
   fallT = 0;
@@ -141,6 +147,12 @@ function resume() {
   input.enabled = true;
   acc = 0;
   requestWakeLock();
+  syncBgm();
+}
+
+// 배경음악: 플레이 중이고 화면이 보일 때만 재생 (일시정지·앱 전환·클리어·타이틀에서는 정지)
+function syncBgm() {
+  audio.setBgm(state === 'playing' && document.visibilityState === 'visible', Math.min(STAGES, run.cp + 1));
 }
 
 function pause() {
@@ -150,6 +162,7 @@ function pause() {
   input.reset();
   saveRun();
   releaseWakeLock();
+  syncBgm();
   showOverlay('pauseMenu');
 }
 
@@ -164,6 +177,7 @@ function onCheckpoint(index) {
   saveRun();
   towerView.setCheckpoints(run.cp);
   audio.playCheckpoint();
+  syncBgm();          // 다음 반복부터 새 스테이지 템포
   hud.toast(`✅ 체크포인트! 스테이지 ${index} 완료`);
 }
 
@@ -172,6 +186,7 @@ function onClear() {
   input.enabled = false;
   input.reset();
   releaseWakeLock();
+  syncBgm();
   audio.playClear();
   const best = store.load(BEST_KEY, null);
   const isNew = !best || run.time < best.time;
@@ -225,6 +240,41 @@ function stageHeight() {
 }
 
 
+// ── 기능형 키캡(기믹) ──
+// 처음 보는 기믹은 한 번만 안내 (다음 키캡이 새 기믹이면 미리, 또는 처음 밟을 때)
+const seen = new Set(store.load('seen', []));
+function introduce(g) {
+  if (!g || seen.has(g)) return;
+  seen.add(g);
+  store.save('seen', [...seen]);   // localStorage 키: kt_seen
+  hud.toast(GIMMICK_INFO[g].toast, 2800);
+}
+function onGimmickLand(b) {
+  introduce(b.g);
+  const next = tower.boxes[boxIndex.get(b) + 1];
+  if (next) introduce(next.g);
+  const fx = onLand(rules, player, b);
+  if (fx === 'crumble') audio.playGimmick('crumble');
+  else if (fx === 'small' || fx === 'big') audio.playGimmick(fx);
+  else if (fx === 'reverse') { audio.playGimmick('reverse'); hud.warn('⇄ 방향 반전!'); }
+  else if (b.g === G.ICE) audio.playGimmick('ice');
+}
+// 규칙이 보낸 알림 처리 (키캡 사라짐, 크기 복귀)
+function drainRuleEvents() {
+  for (const e of rules.events) {
+    if (e.type === 'vanish') audio.playGimmick('vanish');
+    else if (e.type === 'sizeEnd') audio.playGimmick('sizeEnd');
+  }
+  rules.events.length = 0;
+}
+function effectList() {
+  const out = [];
+  if (rules.reverseT > 0) out.push({ cls: 'rev', text: `⇄ 반전 ${Math.ceil(rules.reverseT)}` });
+  if (rules.sizeT > 0 && rules.sizeTarget === SMALL.scale) out.push({ cls: 'small', text: `－ 작아짐 ${Math.ceil(rules.sizeT)}` });
+  if (rules.sizeT > 0 && rules.sizeTarget === BIG.scale) out.push({ cls: 'big', text: `＋ 커짐 ${Math.ceil(rules.sizeT)}` });
+  return out;
+}
+
 // ── 메인 루프 ──
 let lastT = performance.now();
 function frame(now) {
@@ -254,14 +304,16 @@ function frame(now) {
       updateMovers(world, simTime);
     } else {
       const mv = input.getMove();
-      const dir = follow.moveDir(mv.x, mv.y);
+      const dir0 = follow.moveDir(mv.x, mv.y);
       let jump = input.consumeJump();
       acc += dt;
       let steps = 0;
       while (acc >= FIXED_DT && steps < MAX_STEPS) {
         updateMovers(world, simTime);
+        tickRules(rules, player, FIXED_DT);
+        const dir = transformInput(rules, dir0.x, dir0.z);   // 방향 반전 중이면 거꾸로
         const wasGrounded = player.grounded;
-        const ev = stepPlayer(player, { mx: dir.x, mz: dir.z, jumpPressed: jump }, world, FIXED_DT);
+        const ev = stepPlayer(player, { mx: dir.mx, mz: dir.mz, jumpPressed: jump }, world, FIXED_DT);
         if (wasGrounded && !player.grounded) leaveY = player.y;
         fallT = !player.grounded && player.vy < 0 ? fallT + FIXED_DT : 0;
         jump = false;
@@ -269,12 +321,14 @@ function frame(now) {
         acc -= FIXED_DT;
         steps++;
         if (ev.jumped) audio.playJump();
+        if (ev.bounced) audio.playGimmick('bounce');
         if (ev.landed) {
           const b = ev.landBox;
           const kind = b.type === KEY_TYPES.NORMAL ? 0 : b.type === KEY_TYPES.WIDE ? 1 : 2;
           const strength = Math.min(1, ev.landSpeed / 16);
           audio.playKey(kind, strength);
           playerView.onLand(strength);
+          if (b.g) onGimmickLand(b);
           if (leaveY - player.y >= stageHeight()) taunt();   // 한 번에 1스테이지 이상 떨어짐
           if (b === tower.goal) { onClear(); break; }
           if (b.cpIndex) onCheckpoint(b.cpIndex);
@@ -288,6 +342,7 @@ function frame(now) {
           break;
         }
       }
+      drainRuleEvents();
       if (steps >= MAX_STEPS) acc = 0;
       // 이번 프레임에 물리 스텝이 없었다면(고주사율 화면) 점프 입력을 다음 프레임으로 넘김
       if (jump) input.jumpQueued = true;
@@ -297,6 +352,7 @@ function frame(now) {
       height: player.y, stage: Math.min(STAGES, run.cp + 1), stages: STAGES,
       time: run.time, falls: run.falls,
     });
+    hud.effects(effectList());
   } else if (state === 'title') {
     // 타이틀 화면: 타워 주변을 천천히 도는 카메라
     follow.yaw += dt * 0.15;
@@ -333,6 +389,7 @@ document.addEventListener('visibilitychange', () => {
     if (state === 'playing') pause();
     else if (state === 'paused') saveRun();
   }
+  syncBgm();
 });
 window.addEventListener('pagehide', () => { if (state === 'playing' || state === 'paused') saveRun(); });
 
@@ -396,6 +453,28 @@ for (const b of document.querySelectorAll('#volSeg button')) {
   applyVolume(v, false);
 }
 
+// ── 배경음악 볼륨 4단계 (끄기/작게/보통/크게, 기본 보통, 효과음과 별도 저장: kt_bgm) ──
+function applyBgmVolume(level) {
+  audio.setBgmVolume(level);
+  for (const b of document.querySelectorAll('#bgmSeg button')) {
+    const on = +b.dataset.vol === audio.getBgmVolume();
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-checked', on ? 'true' : 'false');
+  }
+}
+for (const b of document.querySelectorAll('#bgmSeg button')) {
+  b.addEventListener('click', (e) => {
+    e.preventDefault();
+    unlock();
+    applyBgmVolume(+b.dataset.vol);
+    store.save('bgm', audio.getBgmVolume());
+  });
+}
+{
+  const v = store.load('bgm', null);
+  applyBgmVolume(typeof v === 'number' ? v : audio.DEFAULT_BGM);
+}
+
 // ── 홈 화면 설치 버튼 (Chrome beforeinstallprompt) ──
 let installEvt = null;
 window.addEventListener('beforeinstallprompt', (e) => {
@@ -442,4 +521,4 @@ if ('serviceWorker' in navigator) {
 }
 
 // 테스트·디버그용 핸들 (자동화 검증에서 사용)
-window.__kt = { tower, world, player, run, get state() { return state; }, quality, audio, follow, input, onFall, placeAtCheckpoint, scene, camera, towerView, playerView };
+window.__kt = { tower, world, player, run, rules, get state() { return state; }, quality, audio, follow, input, onFall, placeAtCheckpoint, scene, camera, towerView, playerView };

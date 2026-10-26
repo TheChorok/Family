@@ -8,7 +8,7 @@ function radiusAt(theta) {
 export const spiral = {
   name: 'spiral',
   startS: 0,
-  search: { start: 0.05, step: 0.004, max: 3.0 },
+  search: { start: 0.05, step: 0.004, max: 3.0, retry: 0.05 },
   ground: { hx: 14, hz: 14 },
   // 키캡마다 반지름을 조금씩 흔듦
   jitter: (rng) => rng() * 0.8 - 0.4,

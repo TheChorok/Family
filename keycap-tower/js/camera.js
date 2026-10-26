@@ -92,7 +92,7 @@ export class FollowCamera {
     const shaft = this.view.kind === 'shaft';
     if (shaft && !free) this.limitYaw(dt, p);
 
-    const tx = p.x, ty = p.y + 1.3, tz = p.z;
+    const tx = p.x, ty = p.y + 1.3 * (p.scale || 1), tz = p.z;   // 커지거나 작아지면 바라보는 높이도 맞춤
     if (this.first) { this.target.set(tx, ty, tz); this.first = false; }
     // 목표점은 약간 지연 추적 (수직은 더 부드럽게)
     const kx = 1 - Math.exp(-dt * 16), ky = 1 - Math.exp(-dt * 8);

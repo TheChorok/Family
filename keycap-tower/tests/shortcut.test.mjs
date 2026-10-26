@@ -1,14 +1,15 @@
 // 지름길 검증: 분석(도달 거리 계산) + 실제 물리 점프 시도, 둘 다 0건이어야 통과
 // 지름길 = 키캡 i에서 i+2 이후 키캡에 바로 닿는 것 (반대편 벽으로 건너뛰기, 모서리 건너뛰기 포함)
 // 실행: node keycap-tower/tests/shortcut.test.mjs [shaft|spiral]
-import { generateTower, shortcutReport, DEFAULT_SHAPE, gapRange } from '../js/layout.js';
+import { shortcutReport, DEFAULT_SHAPE, gapRange } from '../js/layout.js';
 import { JUMP_APEX } from '../js/physics.js';
+import { towerFor } from './tower-cache.mjs';
 import { makeWorld, tryJump } from './bot-lib.mjs';
 
 const shapes = process.argv[2] ? [process.argv[2]] : [DEFAULT_SHAPE, 'spiral'];
 let fail = 0;
 for (const shape of shapes) {
-  const tower = generateTower(undefined, shape);
+  const tower = towerFor(shape);
   const world = makeWorld(tower);
   const b = tower.boxes;
 

@@ -12,6 +12,7 @@ const WALL_T = 1;                       // 벽 두께
 // 모서리 칸에 키캡을 두면 그 앞뒤 키캡(i, i+2)이 대각선으로 너무 가까워져 지름길이 생기기 때문.
 // 대신 양쪽 벽 키캡 사이를 대각선으로 꺾어 뛰는 '모서리 점프'가 경로가 된다.
 const CORNER = 1.8;
+const AVOID_CORNER_UNTIL = 3;  // 이 스테이지까지 모서리 칸 비움 (1스테이지에서 허용하면 대각선 지름길을 피할 수 없음 — 실험으로 확인)
 
 // 변(side)별 안쪽 법선과 진행 방향
 // 0: 동쪽 벽(x=+H), +z 방향 / 1: 북쪽 벽(z=+H), -x 방향 / 2: 서쪽 벽(x=-H), -z 방향 / 3: 남쪽 벽(z=-H), +x 방향
@@ -28,10 +29,12 @@ function sideOf(s) {
 export const shaft = {
   name: 'shaft',
   startS: 0.3 * SIDE,
-  search: { start: 0.3, step: 0.02, max: 22 },
+  search: { start: 0.3, step: 0.04, max: 22, retry: 0.5 },
   ground: { hx: H, hz: H },
 
-  place(s, type) {
+  // stage: 1~3스테이지(간격이 좁음)만 모서리 칸을 비운다. 그 이후는 간격이 넓어 지름길 위험이 작고
+  // (지름길 검사가 따로 거름), 모서리 칸을 쓰면 경로가 끊기지 않아 모서리 앞 막다른 구간이 사라진다.
+  place(s, type, jit, stage = 1) {
     const { side, t } = sideOf(s);
     const d = KEY_DIMS[type];
     const along = d.hx, depth = d.hz;          // 긴 변을 벽과 나란히
@@ -39,7 +42,7 @@ export const shaft = {
     // 모서리 칸을 침범하지 않는 범위. 단, 스페이스바(체크포인트·정상)는 길이가 7m 이상이라
     // 모서리 칸을 써도 앞뒤 키캡이 멀어 지름길이 생기지 않으므로 벽 끝까지 허용한다.
     const long = type === KEY_TYPES.SPACE || type === KEY_TYPES.GOAL;
-    const lim = H - (long ? 0 : CORNER) - along;
+    const lim = H - (long || stage > AVOID_CORNER_UNTIL ? 0 : CORNER) - along;
     if (Math.abs(t) > lim) return null;        // 이 위치는 배치 불가 (생성기가 건너뜀)
     const tc = t;
     let x, z;
@@ -63,8 +66,10 @@ export const shaft = {
 
   // 움직이는 키캡: 벽에서 안쪽으로 튀어나왔다 들어가는 피스톤 (벽을 뚫지 않게 한쪽으로만)
   // 모서리 가까이(1.5m 이내)에서는 튀어나온 키캡이 옆 벽 경로와 가까워져 지름길을 만들므로 움직이지 않는다.
-  // 진폭 상한 1.0m(최대 2m 돌출): 반대편 벽까지 거리를 충분히 남긴다.
-  maxAmp: 1.0,
+  // 진폭 상한 0.6m(최대 1.2m 돌출): 점프대(튕김 초속 14, 물리적 최대 약 7.7m)에서도 반대편 벽까지
+  // 거리(9.4 - 1.2 = 8.2m)가 닿지 않게 한다. 최소 진폭 0.3m(0.6m 왕복)까지 움직이는 키캡으로 인정.
+  maxAmp: 0.6,
+  minAmp: 0.3,
   moveAxis(prev, nb) {
     if (nb.edge < 1.5) return null;
     const [ax, az] = NORMAL[nb.side];

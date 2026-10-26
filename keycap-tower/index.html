@@ -42,6 +42,8 @@
 <button id="jump" aria-label="점프"><span>점프</span></button>
 
 <div id="fade"></div>
+<div id="effects" aria-live="polite"></div>
+<div id="warn"></div>
 <div id="toast"></div>
 <div id="taunt" aria-live="polite"></div>
 
@@ -60,6 +62,7 @@
       <li>⤴️ 오른쪽 아래 버튼으로 <b>점프</b></li>
       <li>👆 화면 나머지 부분을 끌어서 <b>시점 회전</b></li>
       <li>🟩 스페이스바를 밟으면 <b>체크포인트</b> 저장</li>
+      <li>⌨️ PC: 방향키·WASD <b>이동</b>, 스페이스·Shift·Z·X·J <b>점프</b></li>
     </ul>
     <button class="btnInstall small" style="display:none">📲 홈 화면에 설치</button>
   </div>
@@ -74,6 +77,13 @@
     <div class="vol">
       <p class="sub">🔊 효과음 볼륨</p>
       <div class="seg" id="volSeg" role="radiogroup" aria-label="효과음 볼륨">
+        <button data-vol="0" role="radio">끄기</button>
+        <button data-vol="1" role="radio">작게</button>
+        <button data-vol="2" role="radio">보통</button>
+        <button data-vol="3" role="radio">크게</button>
+      </div>
+      <p class="sub">🎵 배경음악</p>
+      <div class="seg" id="bgmSeg" role="radiogroup" aria-label="배경음악 볼륨">
         <button data-vol="0" role="radio">끄기</button>
         <button data-vol="1" role="radio">작게</button>
         <button data-vol="2" role="radio">보통</button>
