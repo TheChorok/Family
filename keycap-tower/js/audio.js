@@ -46,9 +46,24 @@ function buildChain(c) {
   comp.release.value = 0.1;
   m.connect(comp);
   b.connect(comp);
-  comp.connect(c.destination);
+  // 안전 리미터: 컴프레서는 어택(1ms) 동안 피크가 잠깐 새어 나갈 수 있어(측정상 드물게 1샘플)
+  // 마지막에 파형 성형기로 출력을 ±0.98 안에 가둔다. 0.9까지는 그대로, 그 위만 부드럽게 눌러 음색 변화 최소화
+  const shaper = c.createWaveShaper();
+  shaper.curve = SAFETY_CURVE;
+  comp.connect(shaper);
+  shaper.connect(c.destination);
   return { m, b };
 }
+const SAFETY_CURVE = (() => {
+  const n = 2049, curve = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const x = (i / (n - 1)) * 2 - 1, a = Math.abs(x);
+    // |x| ≤ 0.9: 그대로, 그 위: 0.98을 넘지 않는 부드러운 곡선 (입력 ±1 밖은 곡선 양 끝값으로 고정됨)
+    const y = a <= 0.9 ? a : 0.9 + 0.08 * Math.tanh((a - 0.9) / 0.08);
+    curve[i] = Math.sign(x) * y;
+  }
+  return curve;
+})();
 
 function makeNoise(c) {
   // 노이즈 버퍼 1회 생성 (0.5초)

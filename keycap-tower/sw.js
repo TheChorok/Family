@@ -2,7 +2,7 @@
 // - html/js/css/json(같은 출처): 네트워크 우선 → 실패 시 캐시 (배포 즉시 최신 반영)
 // - Three.js CDN·아이콘 등: 캐시 우선 (버전 고정 URL이라 안전)
 // - 캐시 이름에 버전을 붙이고, 활성화 시 옛 버전 캐시 삭제
-const VERSION = 'v4'; // 배포마다 올려서 폰에 새 버전 반영 (v4: 기능형 키캡·배경음악)
+const VERSION = 'v5'; // 배포마다 올려서 폰에 새 버전 반영 (v5: PC 점프 키 추가)
 const CACHE = `keycap-tower-${VERSION}`;
 const THREE_URL = 'https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js';
 const THREE_CORE = 'https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.core.js';

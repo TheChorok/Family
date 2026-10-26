@@ -2,6 +2,11 @@
 const JOY_RADIUS = 56;     // 조이스틱 최대 반경(px)
 const DEADZONE = 0.12;
 
+// PC 점프 키: 스페이스 외에 Shift(좌·우)·Z·X·J
+// 일반·노트북 키보드는 '방향키 2개 + 스페이스' 같은 3키 조합을 하드웨어에서 인식 못 하는 경우가 있어(고스팅)
+// 배선이 다른 키(특히 Shift)로도 점프할 수 있게 한다
+const JUMP_KEYS = new Set(['Space', 'ShiftLeft', 'ShiftRight', 'KeyZ', 'KeyX', 'KeyJ']);
+
 export class Input {
   constructor({ layer, joyBase, joyKnob, jumpBtn }) {
     this.layer = layer;
@@ -44,7 +49,7 @@ export class Input {
       if (e.repeat) return;
       this.fireGesture();
       const k = e.code;
-      if (k === 'Space') { this.jumpQueued = this.enabled; e.preventDefault(); }
+      if (JUMP_KEYS.has(k)) { this.jumpQueued = this.enabled; e.preventDefault(); }
       this.keys.add(k);
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));
