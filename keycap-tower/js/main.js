@@ -12,6 +12,10 @@ import { Quality, QUALITY_NAMES } from './quality.js';
 import * as audio from './audio.js';
 import * as store from './storage.js';
 import { Hud, showOverlay, formatTime } from './hud.js';
+import { CloudStore, FB_URL, famHash, loadFamilyCode, saveFamilyCode } from './cloud.js';
+import { Account } from './account.js';
+import { AccountUI } from './account-ui.js';
+import { pinStats } from './pin.js';
 
 const $ = (id) => document.getElementById(id);
 const FALL_DIST = 12;      // 마지막 체크포인트보다 이만큼 아래로 떨어지면 부활
@@ -108,8 +112,50 @@ let acc = 0;
 let fallT = 0;          // 연속 낙하 시간
 let leaveY = 0;         // 마지막으로 발판을 떠난 높이
 
+// ── 가족 계정 (닉네임별 저장) ──
+// 로그인하면 진행·최고 기록을 닉네임별로 서버에 저장 (오프라인이면 기기에 쌓았다가 나중에 전송)
+// 테스트용 서버 주소 바꾸기(?fb=)는 이 기기 안(localhost)만 허용
+const FB_BASE = (() => {
+  const q = new URLSearchParams(location.search).get('fb');
+  try { if (q && ['127.0.0.1', 'localhost'].includes(new URL(q).hostname)) return q; } catch (e) { /* 무시 */ }
+  return FB_URL;
+})();
+let acct = null;
+function connectCloud(code) {
+  saveFamilyCode(code);
+  acct = code ? new Account({ cloud: new CloudStore({ base: FB_BASE, fam: famHash(code) }) }) : null;
+  return acct;
+}
+connectCloud(loadFamilyCode());
+const loggedIn = () => !!(acct && acct.session);
+// 진행·기록 저장 키: 로그인하면 닉네임별, 아니면 기기 공용(기존과 동일)
+const runKey = () => (loggedIn() ? `run_${acct.fam}_${acct.id}` : 'run');
+const bestKey = () => (loggedIn() ? `${BEST_KEY}_${acct.fam}_${acct.id}` : BEST_KEY);
+
+function loadRun() {
+  const local = store.load(runKey(), null);
+  const cloud = loggedIn() && acct.data ? acct.data.progress : null;
+  if (cloud && validRun(cloud) && (!local || (cloud.at || 0) > (local.at || 0))) return cloud;
+  return local;
+}
+function putRun(obj) {
+  obj.at = Date.now();
+  store.save(runKey(), obj);
+  if (loggedIn()) acct.saveProgress(obj).catch(() => {});
+}
+function clearRun() {
+  store.remove(runKey());
+  if (loggedIn()) acct.saveProgress({ v: RUN_VERSION, shape: tower.shape, cp: 0, time: 0, falls: 0 }).catch(() => {});
+}
+function loadBest() {
+  const local = store.load(bestKey(), null);
+  const cloud = loggedIn() && acct.data ? acct.data.best : null;
+  if (cloud && (!local || cloud.time < local.time)) return cloud;
+  return local;
+}
+
 function saveRun() {
-  store.save('run', { v: RUN_VERSION, shape: tower.shape, cp: run.cp, time: Math.round(run.time * 1000) / 1000, falls: run.falls });
+  putRun({ v: RUN_VERSION, shape: tower.shape, cp: run.cp, time: Math.round(run.time * 1000) / 1000, falls: run.falls });
 }
 // 현재 탑에서 이어할 수 있는 저장인지 (예전 나선 버전 진행은 새로 시작)
 function validRun(saved) {
@@ -127,14 +173,14 @@ function placeAtCheckpoint(index) {
 }
 
 function startRun(cont) {
-  const saved = cont ? store.load('run', null) : null;
+  const saved = cont ? loadRun() : null;
   if (validRun(saved)) {
     run.cp = Math.min(STAGES - 1, Math.max(0, saved.cp | 0));
     run.time = +saved.time || 0;     // 저장된 누적 플레이 시간부터 타이머 이어서 진행
     run.falls = saved.falls | 0;
   } else {
     run.cp = 0; run.time = 0; run.falls = 0;
-    store.remove('run');
+    if (!cont) clearRun();
   }
   towerView.setCheckpoints(run.cp);
   placeAtCheckpoint(run.cp);
@@ -170,7 +216,7 @@ function pause() {
 }
 
 function restart() {
-  store.remove('run');
+  clearRun();
   startRun(false);
 }
 
@@ -191,10 +237,13 @@ function onClear() {
   releaseWakeLock();
   syncBgm();
   audio.playClear();
-  const best = store.load(BEST_KEY, null);
+  const best = loadBest();
   const isNew = !best || run.time < best.time;
-  if (isNew) store.save(BEST_KEY, { time: run.time, falls: run.falls, at: Date.now() });
-  store.remove('run');
+  if (isNew) {
+    store.save(bestKey(), { time: run.time, falls: run.falls, at: Date.now() });
+    if (loggedIn()) acct.saveBest(run.time, run.falls).catch(() => {});
+  }
+  clearRun();
   $('clearTime').textContent = formatTime(run.time);
   $('clearFalls').textContent = `${run.falls}회`;
   const b = isNew ? { time: run.time, falls: run.falls } : best;
@@ -316,6 +365,7 @@ function createDebug() {
         `점프 입력 ${st.presses} / 성공 ${st.ok} / 무시 ${st.missed} (착지 중 ${st.missedGround})`,
         `버튼 ${input.jumpTaps} · 가장자리 ${input.padTaps}${st.lastMiss ? '  마지막 무시: ' + st.lastMiss : ''}`,
         `cancel ${input.cancels}회${lc ? `  마지막 ${((now - lc.t) / 1000).toFixed(1)}초 전(${lc.role})` : ''}`,
+        `PIN 해시 ${pinStats.lastMs ? Math.round(pinStats.lastMs) + 'ms' : '-'}  계정 ${loggedIn() ? acct.session.name + ' 대기 ' + acct.queue().length + '건' : '-'}  서버 ${acct && acct.cloud.mode ? acct.cloud.mode : '-'}`,
       ].join('\n');
     },
   };
@@ -549,17 +599,46 @@ for (const b of document.querySelectorAll('.btnInstall')) {
 
 // ── 타이틀 화면 정보 ──
 function refreshTitle() {
-  const saved = store.load('run', null);
-  if (saved && !validRun(saved)) store.remove('run');   // 예전 나선 탑 진행은 새로 시작
+  const saved = loadRun();
+  if (saved && !validRun(saved) && !loggedIn()) store.remove('run');   // 예전 나선 탑 진행은 새로 시작
   const canContinue = validRun(saved) && (saved.cp > 0 || saved.time > 5);
   $('btnContinue').style.display = canContinue ? '' : 'none';
   if (canContinue) $('btnContinue').textContent = `▶ 이어하기 (스테이지 ${Math.min(STAGES, (saved.cp | 0) + 1)} · ${formatTime(saved.time)})`;
-  const best = store.load(BEST_KEY, null);
+  const best = loadBest();
+  $('acctName').textContent = loggedIn() ? `👤 ${acct.session.name}` : acct ? '👤 게스트 (눌러서 로그인)' : '👤 게스트 (가족 코드 연결)';
+  $('acctCoins').textContent = loggedIn() ? `🪙 ${acct.coins()}` : '';
   $('titleBest').textContent = best ? `🏆 최고 기록 ${formatTime(best.time)} · 낙하 ${best.falls}회` : '🏆 최고 기록 없음 — 첫 등반에 도전!';
   const legacy = store.load(LEGACY_BEST_KEY, null);
   $('titleLegacy').style.display = legacy ? '' : 'none';
   if (legacy) $('titleLegacy').textContent = `이전 탑(나선) 기록 ${formatTime(legacy.time)} · 낙하 ${legacy.falls}회`;
 }
+// 계정 화면
+const accountUI = new AccountUI({
+  body: $('acctBody'),
+  getAcct: () => acct,
+  connect: (code) => { connectCloud(code); refreshTitle(); },
+  disconnect: () => { connectCloud(''); refreshTitle(); },
+  close: () => { refreshTitle(); showOverlay('titleMenu'); },
+  changed: () => refreshTitle(),
+  toast: (m) => hud.toast(m),
+});
+btn('btnAccount', () => { showOverlay('accountMenu'); accountUI.open('auto'); });
+// 시작할 때 저장된 로그인 확인 (PIN이 지워졌으면 새 PIN 설정 화면)
+async function resumeAccount() {
+  if (!acct || !acct.session) return;
+  const name = acct.session.name, id = acct.id;
+  let r = 'offline';
+  try { r = await acct.resume(); } catch (e) { r = 'error'; }
+  refreshTitle();
+  if (state !== 'title') return;
+  if (r === 'newPin') { showOverlay('accountMenu'); accountUI.open('newPin', { id, name }); }
+  else if (r === 'relogin') { hud.toast('PIN이 바뀌었어요. 다시 로그인해 주세요'); showOverlay('accountMenu'); accountUI.open('list'); }
+}
+resumeAccount();
+// 연결이 돌아오면·주기적으로 쌓인 기록 전송
+window.addEventListener('online', () => { if (loggedIn()) acct.flush().then(refreshTitle).catch(() => {}); });
+setInterval(() => { if (loggedIn() && acct.queue().length) acct.flush().catch(() => {}); }, 30000);
+
 refreshTitle();
 placeAtCheckpoint(0);
 follow.pitch = 0.3;
@@ -576,4 +655,4 @@ if ('serviceWorker' in navigator) {
 }
 
 // 테스트·디버그용 핸들 (자동화 검증에서 사용)
-window.__kt = { tower, world, player, run, rules, get state() { return state; }, quality, audio, follow, input, onFall, placeAtCheckpoint, scene, camera, towerView, playerView };
+window.__kt = { get acct() { return acct; }, accountUI, tower, world, player, run, rules, get state() { return state; }, quality, audio, follow, input, onFall, placeAtCheckpoint, scene, camera, towerView, playerView };

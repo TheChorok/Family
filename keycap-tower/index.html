@@ -53,6 +53,7 @@
     <div class="logo"><span class="kc">키</span><span class="kc">캡</span><span class="kc wide">타워</span></div>
     <h1>키캡 타워: 딸깍 등반</h1>
     <p class="sub">키캡 계단을 딸깍딸깍 밟고 10스테이지 정상까지!</p>
+    <button id="btnAccount" class="acBar"><span id="acctName">👤 게스트</span><span id="acctCoins"></span></button>
     <button id="btnContinue" class="big" style="display:none">▶ 이어하기</button>
     <button id="btnNew" class="big primary">새로 시작</button>
     <p id="titleBest" class="best"></p>
@@ -66,6 +67,11 @@
     </ul>
     <button class="btnInstall small" style="display:none">📲 홈 화면에 설치</button>
   </div>
+</div>
+
+<!-- 계정 (가족 코드·닉네임·PIN) -->
+<div id="accountMenu" class="overlay">
+  <div class="card" id="acctBody"></div>
 </div>
 
 <!-- 일시정지 -->
