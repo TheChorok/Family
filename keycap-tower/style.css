@@ -236,3 +236,37 @@ body.menu-open #hud, body.menu-open #jump, body.menu-open #joyHint, body.menu-op
   background: rgba(0, 0, 0, 0.6); color: #9effa8; font: 10px/1.4 monospace; white-space: pre;
   padding: 6px 8px; border-radius: 8px; pointer-events: none; max-width: 70vw; overflow: hidden;
 }
+
+/* ── 계정 (닉네임·PIN) ── */
+.acBar {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%;
+  margin: 2px 0 8px; padding: 9px 14px; border: none; border-radius: 14px; font: inherit; font-weight: 800; font-size: 15px;
+  background: #eef3fb; color: #2b3550; box-shadow: 0 3px 0 #c9d3e6;
+}
+.acBar:active { transform: translateY(2px); box-shadow: 0 1px 0 #c9d3e6; }
+.acInput {
+  width: 100%; border: 3px solid #d6e0ea; border-radius: 12px; padding: 11px; font: inherit; font-size: 16px;
+  margin-bottom: 8px; user-select: text; -webkit-user-select: text; touch-action: manipulation;
+}
+.acList { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 4px 0 10px; }
+.acName {
+  border: none; border-radius: 14px; padding: 12px 16px; font: inherit; font-weight: 900; font-size: 17px;
+  background: #fff3d6; box-shadow: 0 3px 0 #e2c98c; color: #5a3d00; min-width: 90px;
+}
+.acDots { display: flex; gap: 14px; justify-content: center; margin: 6px 0 14px; }
+.acDot { width: 18px; height: 18px; border-radius: 50%; border: 3px solid #8a96ad; }
+.acDot.on { background: #2b3550; border-color: #2b3550; }
+.acPad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 6px; }
+.acPad button {
+  border: none; border-radius: 14px; padding: 13px 0; font: inherit; font-size: 22px; font-weight: 900;
+  background: #f3efe6; box-shadow: 0 3px 0 #c4bdaf; color: #2b3550;
+}
+.acPad button:active { transform: translateY(2px); box-shadow: 0 1px 0 #c4bdaf; }
+.acMsg { font-weight: 800; font-size: 14px; margin: 8px 0 0; }
+.acMsg.bad { color: #c0392b; }
+.acInfo { margin-top: 10px; font-size: 12px; text-align: left; opacity: 0.8; }
+.acInfo code { display: block; word-break: break-all; background: #eef1f6; padding: 6px; border-radius: 6px; margin-top: 4px; user-select: text; -webkit-user-select: text; }
+@media (max-height: 460px) {
+  .acPad button { padding: 7px 0; font-size: 18px; }
+  .acDots { margin: 2px 0 8px; }
+}

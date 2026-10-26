@@ -1,0 +1,52 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "families": {
+      "$fam": {
+        ".read": true,
+        "chess": { ".write": true },
+        "monopoly": { ".write": true },
+        "morris": { ".write": true },
+        "_ping": { ".write": true },
+        "keycap": {
+          "players": {
+            "$id": {
+              ".write": true,
+              ".validate": "newData.hasChildren(['name', 'created'])",
+              "name": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 20" },
+              "created": { ".validate": "newData.isNumber()" },
+              "pinHash": { ".validate": "newData.isString() && newData.val().length == 64" },
+              "salt": { ".validate": "newData.isString() && newData.val().length <= 64" },
+              "iter": { ".validate": "newData.isNumber() && newData.val() >= 10000 && newData.val() <= 1000000" },
+              "$other": { ".validate": false }
+            }
+          },
+          "data": {
+            "$id": {
+              ".write": true,
+              "coins": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() % 1 == 0 && newData.val() <= 10000000" },
+              "items": { "$item": { ".validate": "newData.isNumber()" } },
+              "equip": { "$slot": { ".validate": "newData.isString() && newData.val().length <= 40" } },
+              "best": { ".validate": "newData.hasChildren(['time', 'falls', 'at'])" },
+              "progress": { ".validate": "newData.hasChildren(['cp', 'time'])" },
+              "applied": { "$tx": { ".validate": "newData.isNumber()" } },
+              "appliedFloor": { ".validate": "newData.isNumber()" },
+              "rev": { ".validate": "newData.isNumber()" },
+              "updated": { ".validate": "newData.isNumber()" },
+              "$other": { ".validate": false }
+            }
+          },
+          "ledger": {
+            "$id": {
+              "$tx": {
+                ".write": true,
+                ".validate": "newData.hasChildren(['type', 'amount', 'at'])"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
